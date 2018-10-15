@@ -1,5 +1,4 @@
 # Direct Agreement Module (R3C_AEC-F_AGR-DIR)
-R3 Corda: AEC Finance: Direct Agreement Module
 
 ## What are Direct Agreements?
 
