@@ -1,0 +1,11 @@
+# Eclipse, Mac metadata
+.classpath
+.project
+.settings
+.DS_Store
+
+.gradle
+
+# General build files
+**/build/*
+!docs/build/*
