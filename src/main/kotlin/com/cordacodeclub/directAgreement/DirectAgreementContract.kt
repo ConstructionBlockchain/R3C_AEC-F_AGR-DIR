@@ -22,7 +22,6 @@ class DirectAgreementContract : Contract {
         }
     }
 
-
     override fun verify(tx: LedgerTransaction) {
         val command = tx.commands.requireSingleCommand<Commands>()
         val inputCount = tx.inputsOfType<LegalAgreementState>().count()

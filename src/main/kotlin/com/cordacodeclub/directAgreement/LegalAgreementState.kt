@@ -4,12 +4,13 @@ import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.requireThat
 import net.corda.core.identity.AbstractParty
+import net.corda.core.identity.Party
 import java.util.*
 
 data class LegalAgreementState(
-        val spv: AbstractParty,
-        val contractor: AbstractParty,
-        val lender: AbstractParty,
+        val spv: Party,
+        val contractor: Party,
+        val lender: Party,
         val status: Status,
         val value: Amount<Currency>) : ContractState {
 
