@@ -25,26 +25,23 @@ class DirectAgreementContract : Contract {
     override fun verify(tx: LedgerTransaction) {
         val command = tx.commands.requireSingleCommand<Commands>()
         val inputCount = tx.inputsOfType<LegalAgreementState>().count()
-        val outputCount = tx.outputsOfType<LegalAgreementState>().count()
         requireThat {
+            val outputCount = tx.outputsOfType<LegalAgreementState>().count()
             "There should be one output state of type LegalAgreementState" using (outputCount == 1)
         }
 
         val output = tx.outputsOfType<LegalAgreementState>().single()
         requireThat {
             "There must be only 2 signers" using (command.signers.toSet().size == 2)
-            "SPV and contractor must be signers" using (command.signers.containsAll(listOf(
-                    output.spv.owningKey, output.contractor.owningKey)))
         }
 
         when (command.value) {
             is Commands.CreateViaSpv -> {
                 requireThat {
                     "There should be no input of type LegalAgreementState when creating via SPV" using (inputCount == 0)
-                }
-
-                requireThat {
                     "The output should have status VIASPV" using (output.status == LegalAgreementState.Status.VIASPV)
+                    "SPV and contractor must be signers" using (command.signers.containsAll(listOf(
+                            output.spv.owningKey, output.contractor.owningKey)))
                 }
             }
 
@@ -66,9 +63,8 @@ class DirectAgreementContract : Contract {
                     "The contractor should be the same entity on both states" using (input.contractor == output.contractor)
                     "The lender should be the same entity on both states" using (input.lender == output.lender)
 
-                    "There must be only 2 signers" using (command.signers.toSet().size == 2)
-                    "SPV and contractor must be signers" using (command.signers.containsAll(listOf(
-                            output.spv.owningKey, output.contractor.owningKey)))
+                    "Lender and contractor must be signers" using (command.signers.containsAll(listOf(
+                            output.lender.owningKey, output.contractor.owningKey)))
                 }
             }
 
