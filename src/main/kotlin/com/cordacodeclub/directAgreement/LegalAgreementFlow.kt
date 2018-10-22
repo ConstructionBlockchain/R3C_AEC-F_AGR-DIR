@@ -1,7 +1,8 @@
+package com.cordacodeclub.directAgreement
+
 import co.paralleluniverse.fibers.Suspendable
 import com.cordacodeclub.directAgreement.DirectAgreementContract.Commands.CreateViaSpv
 import com.cordacodeclub.directAgreement.DirectAgreementContract.Companion.ID
-import com.cordacodeclub.directAgreement.LegalAgreementState
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndContract

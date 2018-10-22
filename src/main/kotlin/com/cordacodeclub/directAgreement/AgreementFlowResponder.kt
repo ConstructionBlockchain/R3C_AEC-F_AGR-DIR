@@ -1,5 +1,6 @@
+package com.cordacodeclub.directAgreement
+
 import co.paralleluniverse.fibers.Suspendable
-import com.cordacodeclub.directAgreement.LegalAgreementState
 import net.corda.core.contracts.requireThat
 import net.corda.core.flows.FlowLogic
 import net.corda.core.flows.FlowSession
