@@ -8,22 +8,22 @@ import net.corda.core.identity.Party
 import java.util.*
 
 data class LegalAgreementState(
-        val spv: Party,
-        val contractor: Party,
-        val lender: Party,
+        val intermediary: Party,
+        val partyA: Party,
+        val partyB: Party,
         val status: Status,
         val value: Amount<Currency>) : ContractState {
 
-    enum class Status { VIASPV, DIRECT }
+    enum class Status { INTERMEDIATE, DIRECT }
 
     init {
         requireThat {
             "The value should be positive" using (value.quantity > 0)
-            "The SPV and contractor cannot be the same entity" using (spv != contractor)
-            "The contractor and lender cannot be the same entity" using (contractor != lender)
-            "The lender and SPV cannot be the same entity" using (lender != spv)
+            "The intermediary and partyA cannot be the same entity" using (intermediary != partyA)
+            "The partyA and partyB cannot be the same entity" using (partyA != partyB)
+            "The partyB and intermediary cannot be the same entity" using (partyB != intermediary)
         }
     }
 
-    override val participants: List<AbstractParty> = listOf(contractor, lender)
+    override val participants: List<AbstractParty> = listOf(partyA, partyB)
 }

@@ -22,9 +22,9 @@
 //        ledgerServices.ledger {
 //            transaction {
 //                output(ID, LegalAgreementState(testSpv, testContractor, testLender,
-//                        LegalAgreementState.Status.VIASPV, Amount(10, Currency.getInstance("GBP"))))
+//                        LegalAgreementState.Status.INTERMEDIATE, Amount(10, Currency.getInstance("GBP"))))
 //                fails()
-//                command(listOf(testSpv.publicKey, testContractor.publicKey), DirectAgreementContract.Commands.CreateViaSpv())
+//                command(listOf(testSpv.publicKey, testContractor.publicKey), DirectAgreementContract.Commands.Create())
 //                verifies()
 //            }
 //        }
