@@ -2,21 +2,21 @@ package com.cordacodeclub.directAgreement
 
 import co.paralleluniverse.fibers.Suspendable
 import com.cordacodeclub.directAgreement.DirectAgreementContract.Companion.ID
-import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Command
-import net.corda.core.contracts.StateAndContract
+import net.corda.core.contracts.StateAndRef
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
-import java.util.*
-
-//This flow is to be started by PartyA and PartyB.
+import java.lang.IllegalArgumentException
 
 @InitiatingFlow
 @StartableByRPC
-class DirectAgreementFlow(val inputState: LegalAgreementState,
-                          val partyB: Party) : FlowLogic<Unit>() {
+/**
+ * This flow can be started by partyA or partyB.
+ * And it has to be signed by partyA and partyB.
+ */
+class DirectAgreementFlow(val inputStateAndRef: StateAndRef<LegalAgreementState>) : FlowLogic<Unit>() {
 
     /** The progress tracker provides checkpoints indicating the progress of the flow to observers. */
     override val progressTracker = ProgressTracker()
@@ -24,35 +24,43 @@ class DirectAgreementFlow(val inputState: LegalAgreementState,
     /** The flow logic is encapsulated within the call() method. */
     @Suspendable
     override fun call() {
-        // We retrieve the notary identity from the network map.
+        // We retrieve the first notary identity from the network map.
         val notary = serviceHub.networkMapCache.notaryIdentities[0]
 
-        val tx2Builder = TransactionBuilder(notary = notary)
-
-        // We create the transaction components.
+        // We create the transaction output state from the input.
+        val inputState = inputStateAndRef.state.data
         val outputState = inputState.copy(status = LegalAgreementState.Status.DIRECT)
 
-        val outputAgreementContractState = StateAndContract(outputState, ID)
         val cmd = Command(DirectAgreementContract.Commands.GoToDirect(),
-                listOf(ourIdentity.owningKey, partyB.owningKey))
+                listOf(inputState.partyA.owningKey, inputState.partyB.owningKey))
 
-        //We add the items ot the builder
-        tx2Builder.withItems(outputAgreementContractState, cmd)
+        val txBuilder = TransactionBuilder(notary = notary)
 
-        //Verifying the transaction
-        tx2Builder.verify(serviceHub)
+        // We add the items ot the builder
+        txBuilder.addOutputState(outputState, ID)
+        txBuilder.addCommand(cmd)
+        txBuilder.addInputState(inputStateAndRef)
 
-        //Signing the transaction
-        val signedTx2 = serviceHub.signInitialTransaction(tx2Builder)
+        // Verifying the transaction
+        txBuilder.verify(serviceHub)
 
-        //Creating a session with the other party
-        val otherPartySession = initiateFlow(partyB)
+        // Signing the transaction
+        val signedTx = serviceHub.signInitialTransaction(txBuilder)
 
-        //Obtaining the counterparty's signature
-        val fullySignedtx2 = subFlow(CollectSignaturesFlow(signedTx2,
+        // Creating a session with the other party
+        val otherParty = if (ourIdentity == inputState.partyA)
+            inputState.partyB
+            else (if (ourIdentity == inputState.partyB)
+                inputState.partyA
+                else throw IllegalArgumentException("Unexpected party"))
+        val otherPartySession = initiateFlow(otherParty)
+
+        // Obtaining the counterparty's signature
+        val fullySignedTx = subFlow(CollectSignaturesFlow(
+                signedTx,
                 listOf(otherPartySession), CollectSignaturesFlow.tracker()))
 
-        // We finalise the transaction.
-        subFlow(FinalityFlow(fullySignedtx2))
+        // We finalise the transaction with the notary.
+        subFlow(FinalityFlow(fullySignedTx))
     }
 }
