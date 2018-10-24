@@ -14,8 +14,8 @@ import java.util.*
 @InitiatingFlow
 @StartableByRPC
 class DirectAgreementFlow(val legalAgreement: LegalAgreementState, val agreementValue: Amount<Currency>,
-                         val contractor: Party,
-                         val lender: Party) : FlowLogic<Unit>() {
+                          val partyA: Party,
+                          val partyB: Party) : FlowLogic<Unit>() {
 
     /** The progress tracker provides checkpoints indicating the progress of the flow to observers. */
     override val progressTracker = ProgressTracker()
@@ -30,11 +30,11 @@ class DirectAgreementFlow(val legalAgreement: LegalAgreementState, val agreement
 
         // We create the transaction components.
         val inputState = legalAgreement
-        val outputState = LegalAgreementState(ourIdentity, contractor, lender,
+        val outputState = LegalAgreementState(ourIdentity, partyA, partyB,
                 LegalAgreementState.Status.DIRECT, agreementValue)
         val outputAgreementContractState = StateAndContract(outputState, ID)
         val cmd = Command(DirectAgreementContract.Commands.GoToDirect(),
-                listOf(ourIdentity.owningKey, contractor.owningKey))
+                listOf(ourIdentity.owningKey, partyA.owningKey))
 
         //We add the items ot the builder
         tx2Builder.withItems(outputAgreementContractState, cmd)
@@ -46,7 +46,7 @@ class DirectAgreementFlow(val legalAgreement: LegalAgreementState, val agreement
         val signedTx2 = serviceHub.signInitialTransaction(tx2Builder)
 
         //Creating a session with the other party
-        val otherPartySession = initiateFlow(contractor)
+        val otherPartySession = initiateFlow(partyA)
 
         //Obtaining the counterparty's signature
         val fullySignedtx2 = subFlow(CollectSignaturesFlow(signedTx2,
