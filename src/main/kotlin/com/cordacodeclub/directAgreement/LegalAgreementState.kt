@@ -5,6 +5,7 @@ import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.requireThat
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.serialization.CordaSerializable
 import java.util.*
 
 data class LegalAgreementState(
@@ -14,6 +15,7 @@ data class LegalAgreementState(
         val status: Status,
         val value: Amount<Currency>) : ContractState {
 
+    @CordaSerializable
     enum class Status { INTERMEDIATE, DIRECT }
 
     init {
