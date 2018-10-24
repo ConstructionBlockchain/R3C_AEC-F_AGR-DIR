@@ -16,7 +16,7 @@ data class LegalAgreementState(
         val value: Amount<Currency>) : ContractState {
 
     @CordaSerializable
-    enum class Status { INTERMEDIATE, DIRECT }
+    enum class Status { INTERMEDIATE, DIRECT, COMPLETED }
 
     init {
         requireThat {

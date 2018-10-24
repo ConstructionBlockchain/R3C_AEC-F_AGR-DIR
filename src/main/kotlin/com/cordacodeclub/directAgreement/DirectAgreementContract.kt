@@ -74,6 +74,8 @@ class DirectAgreementContract : Contract {
 
     interface Commands : CommandData {
         class Create : Commands
-        class GoToDirect : Commands // Will want an oracle on Intermediary being bust
+        class GoToDirect : Commands
+        class Finalise : Commands
+        // Will want an oracle on Intermediary being bust
     }
 }

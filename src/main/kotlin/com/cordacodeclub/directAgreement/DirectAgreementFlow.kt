@@ -11,10 +11,11 @@ import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import java.util.*
 
+//This flow is to be started by PartyA and PartyB.
+
 @InitiatingFlow
 @StartableByRPC
-class DirectAgreementFlow(val legalAgreement: LegalAgreementState, val agreementValue: Amount<Currency>,
-                          val partyA: Party,
+class DirectAgreementFlow(val inputState: LegalAgreementState,
                           val partyB: Party) : FlowLogic<Unit>() {
 
     /** The progress tracker provides checkpoints indicating the progress of the flow to observers. */
@@ -29,12 +30,11 @@ class DirectAgreementFlow(val legalAgreement: LegalAgreementState, val agreement
         val tx2Builder = TransactionBuilder(notary = notary)
 
         // We create the transaction components.
-        val inputState = legalAgreement
-        val outputState = LegalAgreementState(ourIdentity, partyA, partyB,
-                LegalAgreementState.Status.DIRECT, agreementValue)
+        val outputState = inputState.copy(status = LegalAgreementState.Status.DIRECT)
+
         val outputAgreementContractState = StateAndContract(outputState, ID)
         val cmd = Command(DirectAgreementContract.Commands.GoToDirect(),
-                listOf(ourIdentity.owningKey, partyA.owningKey))
+                listOf(ourIdentity.owningKey, partyB.owningKey))
 
         //We add the items ot the builder
         tx2Builder.withItems(outputAgreementContractState, cmd)
@@ -46,7 +46,7 @@ class DirectAgreementFlow(val legalAgreement: LegalAgreementState, val agreement
         val signedTx2 = serviceHub.signInitialTransaction(tx2Builder)
 
         //Creating a session with the other party
-        val otherPartySession = initiateFlow(partyA)
+        val otherPartySession = initiateFlow(partyB)
 
         //Obtaining the counterparty's signature
         val fullySignedtx2 = subFlow(CollectSignaturesFlow(signedTx2,
