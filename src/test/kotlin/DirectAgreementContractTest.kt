@@ -79,7 +79,7 @@ class DirectAgreementContractTest {
     fun `Direct transaction should have one input`() {
         ledgerServices.ledger {
             transaction {
-                output(ID, directAgreement)
+                output(ID, intermediaryAgreement)
                 command(listOf(testPartyA.publicKey, testPartyB.publicKey), DirectAgreementContract.Commands.GoToDirect())
                 fails()
 
@@ -88,7 +88,18 @@ class DirectAgreementContractTest {
     }
 
     @Test
-    fun `Direct transaction should be an intermediary agreement type `() {
+    fun `Direct transaction can only be done via GoToDirect command`() {
+        ledgerServices.ledger {
+            transaction {
+                output(ID, directAgreement)
+                command(listOf(testPartyA.publicKey, testPartyB.publicKey), DirectAgreementContract.Commands.Create())
+                fails()
+            }
+        }
+    }
+
+    @Test
+    fun `Direct transaction input should be an intermediary agreement type `() {
         ledgerServices.ledger {
             transaction {
                 input(ID,intermediaryAgreement)
@@ -101,7 +112,7 @@ class DirectAgreementContractTest {
     }
 
     @Test
-    fun `Direct transaction must have INTERMEDIATE status`() {
+    fun `Direct transaction input must have INTERMEDIATE status`() {
         ledgerServices.ledger {
             transaction {
                 output(ID, intermediaryAgreement)
@@ -131,12 +142,193 @@ class DirectAgreementContractTest {
     }
 
     @Test
-    fun `Direct transaction input and output values should be equal`() {
+    fun `Direct transaction input and output values must be equal`() {
         ledgerServices.ledger {
             transaction {
                 input(ID, intermediaryAgreement)
-                output(ID, directAgreement.copy(value = Amount(11, USD) ))
-                command(listOf(testPartyA.publicKey, testPartyB.publicKey), DirectAgreementContract.Commands.Create())
+                output(ID, directAgreement.copy(value = Amount(11, USD)))
+                command(listOf(testPartyA.publicKey, testPartyB.publicKey), DirectAgreementContract.Commands.GoToDirect())
+                fails()
+            }
+        }
+    }
+
+    @Test
+    fun `Direct transaction input and output parties must be the same entities`() {
+        val testForeignParty = TestIdentity(CordaX500Name("TestForeign", "London", "US"))
+        ledgerServices.ledger {
+            transaction {
+                input(ID, intermediaryAgreement)
+                output(ID, directAgreement.copy(partyB = testForeignParty.party))
+                command(listOf(testPartyA.publicKey, testForeignParty.publicKey), DirectAgreementContract.Commands.GoToDirect())
+                fails()
+            }
+            transaction {
+                input(ID, intermediaryAgreement)
+                output(ID, directAgreement.copy(partyA = testForeignParty.party))
+                command(listOf(testForeignParty.publicKey, testPartyB.publicKey), DirectAgreementContract.Commands.GoToDirect())
+                fails()
+            }
+        }
+    }
+
+    @Test
+    fun `Complete transaction must always have one input `() {
+        ledgerServices.ledger {
+            transaction {
+                output(ID, completeAgreement)
+                command(listOf(testPartyA.publicKey, testIntermediary.publicKey), DirectAgreementContract.Commands.Finalise())
+                fails()
+
+            }
+        }
+    }
+
+    @Test
+    fun `Complete transaction input must of type intermediary or direct`() {
+        ledgerServices.ledger {
+            transaction {
+                input(ID, intermediaryAgreement)
+                output(ID, completeAgreement)
+                command(listOf(testPartyA.publicKey, testIntermediary.publicKey), DirectAgreementContract.Commands.Finalise())
+                verifies()
+            }
+            transaction {
+                input(ID, directAgreement)
+                output(ID, completeAgreement)
+                command(listOf(testPartyA.publicKey, testPartyB.publicKey), DirectAgreementContract.Commands.Finalise())
+                verifies()
+            }
+        }
+    }
+
+    @Test
+    fun `Complete transaction output must have Completed status`() {
+        ledgerServices.ledger {
+            transaction {
+                input(ID, intermediaryAgreement)
+                output(ID, completeAgreement.copy(status = LegalAgreementState.Status.INTERMEDIATE))
+                command(listOf(testPartyA.publicKey, testIntermediary.publicKey), DirectAgreementContract.Commands.Finalise())
+                fails()
+            }
+            transaction {
+                input(ID, directAgreement)
+                output(ID, completeAgreement.copy(status = LegalAgreementState.Status.DIRECT))
+                command(listOf(testPartyA.publicKey, testPartyB.publicKey), DirectAgreementContract.Commands.Finalise())
+                fails()
+            }
+        }
+    }
+
+    @Test
+    fun `Complete transaction can only be done via Finalise command`() {
+        ledgerServices.ledger {
+            transaction {
+                input(ID, intermediaryAgreement)
+                output(ID, completeAgreement)
+                command(listOf(testPartyA.publicKey, testIntermediary.publicKey), DirectAgreementContract.Commands.GoToDirect())
+                fails()
+            }
+            transaction {
+                output(ID, completeAgreement)
+                command(listOf(testPartyA.publicKey, testIntermediary.publicKey), DirectAgreementContract.Commands.Create())
+                fails()
+            }
+            transaction {
+                input(ID, intermediaryAgreement)
+                output(ID, completeAgreement)
+                command(listOf(testPartyA.publicKey, testIntermediary.publicKey), DirectAgreementContract.Commands.Finalise())
+                verifies()
+            }
+        }
+    }
+
+    @Test
+    fun `Complete transaction input and output values must be equal`() {
+        ledgerServices.ledger {
+            transaction {
+                input(ID, intermediaryAgreement)
+                output(ID, completeAgreement.copy(value = Amount(11, USD)))
+                command(listOf(testPartyA.publicKey, testIntermediary.publicKey), DirectAgreementContract.Commands.Finalise())
+                fails()
+            }
+        }
+    }
+
+    @Test
+    fun `Complete transaction must have 2 signers`() {
+        ledgerServices.ledger {
+            transaction {
+                input(ID, intermediaryAgreement)
+                output(ID, completeAgreement)
+                command(listOf(testPartyA.publicKey), DirectAgreementContract.Commands.Finalise())
+                fails()
+            }
+            transaction {
+                input(ID, intermediaryAgreement)
+                output(ID, completeAgreement)
+                command(listOf(testPartyA.publicKey, testPartyB.publicKey, testIntermediary.publicKey), DirectAgreementContract.Commands.Finalise())
+                fails()
+            }
+        }
+    }
+
+    @Test
+    fun `Complete transaction must be signed by PartyA and Intermediate only if the input was of status Intermediate`() {
+        ledgerServices.ledger {
+            transaction {
+                input(ID, intermediaryAgreement)
+                output(ID, completeAgreement)
+                command(listOf(testPartyA.publicKey, testPartyB.publicKey), DirectAgreementContract.Commands.Finalise())
+                fails()
+            }
+            transaction {
+                input(ID, intermediaryAgreement)
+                output(ID, completeAgreement)
+                command(listOf(testPartyA.publicKey, testIntermediary.publicKey), DirectAgreementContract.Commands.Finalise())
+                verifies()
+            }
+        }
+    }
+
+    @Test
+    fun `Complete transaction must be signed by PartyA and PartyB only if the input was of status Direct`() {
+        ledgerServices.ledger {
+            transaction {
+                input(ID, directAgreement)
+                output(ID, completeAgreement)
+                command(listOf(testPartyA.publicKey, testIntermediary.publicKey), DirectAgreementContract.Commands.Finalise())
+                fails()
+            }
+            transaction {
+                input(ID, directAgreement)
+                output(ID, completeAgreement)
+                command(listOf(testPartyA.publicKey, testPartyB.publicKey), DirectAgreementContract.Commands.Finalise())
+                verifies()
+            }
+        }
+    }
+
+    @Test
+    fun `Complete transaction input and output parties must be the same entities`() {
+        val testForeignParty = TestIdentity(CordaX500Name("TestForeign", "London", "US"))
+        ledgerServices.ledger {
+            transaction {
+                input(ID, intermediaryAgreement)
+                output(ID, completeAgreement.copy(intermediary = testForeignParty.party))
+                command(listOf(testPartyA.publicKey, testForeignParty.publicKey), DirectAgreementContract.Commands.Finalise())
+                fails()
+            }
+            transaction {
+                input(ID, intermediaryAgreement)
+                output(ID, completeAgreement.copy(partyA = testForeignParty.party))
+                command(listOf(testForeignParty.publicKey, testIntermediary.publicKey), DirectAgreementContract.Commands.Finalise())
+                fails()
+            }
+            transaction {
+                input(ID, directAgreement)
+                output(ID, completeAgreement.copy(partyB = testForeignParty.party))
+                command(listOf(testPartyA.publicKey, testForeignParty.publicKey), DirectAgreementContract.Commands.Finalise())
                 fails()
             }
         }

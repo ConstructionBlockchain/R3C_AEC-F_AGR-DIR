@@ -2,7 +2,6 @@ package com.cordacodeclub.directAgreement
 
 import co.paralleluniverse.fibers.Suspendable
 import net.corda.core.contracts.Command
-import net.corda.core.contracts.Requirements.using
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
@@ -39,7 +38,7 @@ object DirectAgreementFlow {
 
             val txBuilder = TransactionBuilder(notary = notary)
 
-            // We add the items ot the builder
+            // We add the items of the builder
             txBuilder.addOutputState(outputState, DirectAgreementContract.ID)
             txBuilder.addCommand(cmd)
             txBuilder.addInputState(inputStateAndRef)

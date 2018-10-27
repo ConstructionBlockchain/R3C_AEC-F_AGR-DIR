@@ -68,6 +68,37 @@ class DirectAgreementContract : Contract {
                 }
             }
 
+            is Commands.Finalise -> {
+                requireThat {
+                    "One LegalAgreementState should be consumed when creating Direct" using (inputCount == 1)
+                }
+
+                val input = tx.inputsOfType<LegalAgreementState>().single()
+                requireThat {
+                    "The input should have status INTERMEDIATE or DIRECT" using
+                            (input.status == LegalAgreementState.Status.INTERMEDIATE || input.status == LegalAgreementState.Status.DIRECT )
+                }
+
+                requireThat {
+                    "The output should have status COMPLETED" using (output.status == LegalAgreementState.Status.COMPLETED)
+                    "The output value should be equal to the input value" using (output.value == input.value)
+                    "The intermediary should be the same entity on both states" using (input.intermediary == output.intermediary)
+                    "The partyA should be the same entity on both states" using (input.partyA == output.partyA)
+                    "The partyB should be the same entity on both states" using (input.partyB == output.partyB)
+
+                    "There must be only 2 signers" using (command.signers.toSet().size == 2)
+                }
+
+                when (input.status) {
+                    LegalAgreementState.Status.INTERMEDIATE -> requireThat {
+                        "PartyA and Intermidiate must be the signers" using (command.signers.containsAll(listOf(output.partyA.owningKey, output.intermediary.owningKey)))
+                    }
+                    LegalAgreementState.Status.DIRECT -> requireThat {
+                        "PartyA and PartyB must be the signers" using (command.signers.containsAll(listOf(output.partyA.owningKey, output.partyB.owningKey)))
+                    }
+                }
+            }
+
             else -> throw IllegalArgumentException("Unrecognised command")
         }
     }
