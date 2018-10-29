@@ -5,7 +5,6 @@ import com.cordacodeclub.directAgreement.DirectAgreementContract.Commands.Create
 import com.cordacodeclub.directAgreement.DirectAgreementContract.Companion.ID
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Command
-import net.corda.core.contracts.Requirements.using
 import net.corda.core.contracts.requireThat
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
@@ -23,7 +22,8 @@ object LegalAgreementFlow {
      */
     class LegalAgreementFlowInitiator(val agreementValue: Amount<Currency>,
                                       val partyA: Party,
-                                      val partyB: Party) : FlowLogic<Unit>() {
+                                      val partyB: Party,
+                                      val oracle: Party) : FlowLogic<Unit>() {
 
         /** The progress tracker provides checkpoints indicating the progress of the flow to observers. */
         override val progressTracker = ProgressTracker()
@@ -39,6 +39,7 @@ object LegalAgreementFlow {
                     intermediary = ourIdentity,
                     partyA = partyA,
                     partyB = partyB,
+                    oracle = oracle,
                     status = LegalAgreementState.Status.INTERMEDIATE,
                     value = agreementValue)
             val cmd = Command(Create(), listOf(ourIdentity.owningKey, partyA.owningKey))

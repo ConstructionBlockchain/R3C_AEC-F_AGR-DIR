@@ -4,6 +4,7 @@ import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.requireSingleCommand
 import net.corda.core.contracts.requireThat
+import net.corda.core.identity.Party
 import net.corda.core.transactions.LedgerTransaction
 import java.lang.IllegalArgumentException
 import java.security.PublicKey
@@ -27,13 +28,13 @@ class DirectAgreementContract : Contract {
         val outputCount = tx.outputsOfType<LegalAgreementState>().count()
 
         requireThat {
-            "There must be only 2 signers" using (command.signers.toSet().size == 2)
             "There should be one output state of type LegalAgreementState" using (outputCount == 1)
         }
         val output = tx.outputsOfType<LegalAgreementState>().single()
 
         when (command.value) {
             is Commands.Create -> requireThat {
+                "There must be only 2 signers" using (command.signers.toSet().size == 2)
                 "There should be no input of type LegalAgreementState when creating via Intermediary" using (inputCount == 0)
                 "The output should have status INTERMEDIATE" using (output.status == LegalAgreementState.Status.INTERMEDIATE)
                 "Intermediary and partyA must be signers" using (command.signers.containsAll(listOf(
@@ -41,22 +42,28 @@ class DirectAgreementContract : Contract {
             }
 
             is Commands.GoToDirect -> requireThat {
+                "There must be only 3 signers" using (command.signers.toSet().size == 3)
                 "One LegalAgreementState should be consumed when creating Direct" using (inputCount == 1)
                 "There should be one output state of type LegalAgreementState" using (outputCount == 1)
                 val input = tx.inputsOfType<LegalAgreementState>().single()
                 "The input should have status INTERMEDIATE" using (input.status == LegalAgreementState.Status.INTERMEDIATE)
+                val commandValue = command.value as Commands.GoToDirect
+                "The intermediary needs to be mentioned in the command" using (input.intermediary == commandValue.party)
+                "The intermediate needs to be bust" using (commandValue.isBust)
                 // Can we assume that the requirements in `Create` are fulfilled?
                 "The output should have status DIRECT" using (output.status == LegalAgreementState.Status.DIRECT)
                 "The output value should be equal to the input value" using (output.value == input.value)
                 "The intermediary should be the same entity on both states" using (input.intermediary == output.intermediary)
                 "The partyA should be the same entity on both states" using (input.partyA == output.partyA)
                 "The partyB should be the same entity on both states" using (input.partyB == output.partyB)
-                "PartyA and partyB must be signers" using (command.signers.containsAll(listOf(
-                        output.partyA.owningKey, output.partyB.owningKey)))
+                "The oracle should be the same entity on both states" using (input.oracle == output.oracle)
+                "PartyA, partyB and the oracle must be signers" using (command.signers.containsAll(listOf(
+                        output.partyA.owningKey, output.partyB.owningKey, output.oracle.owningKey)))
             }
 
             is Commands.Finalise -> {
                 requireThat {
+                    "There must be only 2 signers" using (command.signers.toSet().size == 2)
                     "One LegalAgreementState should be consumed when creating Direct" using (inputCount == 1)
                 }
 
@@ -69,6 +76,7 @@ class DirectAgreementContract : Contract {
                     "The intermediary should be the same entity on both states" using (input.intermediary == output.intermediary)
                     "The partyA should be the same entity on both states" using (input.partyA == output.partyA)
                     "The partyB should be the same entity on both states" using (input.partyB == output.partyB)
+                    "The oracle should be the same entity on both states" using (input.oracle == output.oracle)
 
                     "There must be only 2 signers" using (command.signers.toSet().size == 2)
                 }
@@ -90,7 +98,7 @@ class DirectAgreementContract : Contract {
 
     interface Commands : CommandData {
         class Create : Commands
-        class GoToDirect : Commands
+        class GoToDirect(val party: Party, val isBust: Boolean) : Commands
         class Finalise : Commands
         // Will want an oracle on Intermediary being bust
     }

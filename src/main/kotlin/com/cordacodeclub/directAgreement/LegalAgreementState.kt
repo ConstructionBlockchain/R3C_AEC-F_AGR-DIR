@@ -12,6 +12,7 @@ data class LegalAgreementState(
         val intermediary: Party,
         val partyA: Party,
         val partyB: Party,
+        val oracle: Party,
         val status: Status,
         val value: Amount<Currency>) : ContractState {
 

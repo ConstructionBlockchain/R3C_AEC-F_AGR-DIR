@@ -9,6 +9,7 @@ import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
 import java.lang.IllegalArgumentException
+import java.util.function.Predicate
 
 object DirectAgreementFlow {
 
@@ -33,8 +34,12 @@ object DirectAgreementFlow {
             val inputState = inputStateAndRef.state.data
             val outputState = inputState.copy(status = LegalAgreementState.Status.DIRECT)
 
-            val cmd = Command(DirectAgreementContract.Commands.GoToDirect(),
-                    listOf(inputState.partyA.owningKey, inputState.partyB.owningKey))
+            val isBustFromOracle = subFlow(BustPartyOracleFlow.QueryBustPartyInitiator(
+                    inputState.oracle, inputState.intermediary))
+
+            val cmd = Command(
+                    DirectAgreementContract.Commands.GoToDirect(inputState.intermediary, isBustFromOracle),
+                    listOf(inputState.partyA.owningKey, inputState.partyB.owningKey, inputState.oracle.owningKey))
 
             val txBuilder = TransactionBuilder(notary = notary)
 
@@ -47,7 +52,22 @@ object DirectAgreementFlow {
             txBuilder.verify(serviceHub)
 
             // Signing the transaction
-            val signedTx = serviceHub.signInitialTransaction(txBuilder)
+            val signedTx1 = serviceHub.signInitialTransaction(txBuilder)
+
+            // Asking the oracle to sign the transaction
+            // For privacy reasons, we only want to expose to the oracle any commands of type `GoToDirect`
+            // that require its signature.
+            val ftx = signedTx1.buildFilteredTransaction(Predicate {
+                when (it) {
+                    is Command<*> -> inputState.oracle.owningKey in it.signers &&
+                            it.value is DirectAgreementContract.Commands.GoToDirect
+                    else -> false
+                }
+            })
+
+            val oracleSignature = subFlow(BustPartyOracleFlow.SignBustParty(inputState.oracle, ftx))
+            val signedTx = signedTx1.withAdditionalSignature(oracleSignature)
+
 
             // Creating a session with the other party
             val otherParty = if (ourIdentity == inputState.partyA)
