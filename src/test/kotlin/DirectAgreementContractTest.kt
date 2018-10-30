@@ -7,6 +7,7 @@ import net.corda.finance.USD
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
+import org.junit.Ignore
 import org.junit.Test
 import java.util.*
 
@@ -18,21 +19,19 @@ class DirectAgreementContractTest {
     private val testPartyB = TestIdentity(CordaX500Name("TestPartyB", "London", "GB"))
     private val testOracle = TestIdentity(CordaX500Name("TestOracle", "London", "GB"))
     private val intermediaryAgreement = LegalAgreementState(
-            testIntermediary.party, testPartyA.party, testPartyB.party, testOracle.party,
-            LegalAgreementState.Status.INTERMEDIATE, Amount(10, Currency.getInstance("GBP")))
-    private val directAgreement = LegalAgreementState(
-            testIntermediary.party, testPartyA.party, testPartyB.party, testOracle.party,
-            LegalAgreementState.Status.DIRECT, Amount(10, Currency.getInstance("GBP")))
-    private val completeAgreement = LegalAgreementState(
-            testIntermediary.party, testPartyA.party, testPartyB.party, testOracle.party,
-            LegalAgreementState.Status.COMPLETED, Amount(10, Currency.getInstance("GBP")))
+            intermediary = testIntermediary.party, partyA = testPartyA.party,
+            partyB = testPartyB.party, oracle = testOracle.party,
+            status = LegalAgreementState.Status.INTERMEDIATE,
+            value = Amount(10, Currency.getInstance("GBP")))
+    private val directAgreement = intermediaryAgreement.copy(status = LegalAgreementState.Status.DIRECT)
+    private val completeAgreement = intermediaryAgreement.copy(status = LegalAgreementState.Status.COMPLETED)
 
-    @Test
+    @Test @Ignore("This is testing the Corda framework here, not our code")
     fun `Create transaction must include Create command`() {
         ledgerServices.ledger {
             transaction {
                 output(ID, intermediaryAgreement)
-                fails()
+                failsWith("must contain at least one command")
                 command(
                         listOf(testIntermediary.publicKey, testPartyA.publicKey),
                         DirectAgreementContract.Commands.Create())
@@ -50,7 +49,7 @@ class DirectAgreementContractTest {
                 command(
                         listOf(testIntermediary.publicKey, testPartyA.publicKey),
                         DirectAgreementContract.Commands.Create())
-                fails()
+                failsWith("should be no input of type LegalAgreementState when creating via Intermediary")
             }
         }
     }
@@ -63,7 +62,7 @@ class DirectAgreementContractTest {
                 command(
                         listOf(testIntermediary.publicKey, testPartyB.publicKey),
                         DirectAgreementContract.Commands.Create())
-                fails()
+                failsWith("Intermediary and partyA must be signers")
             }
             transaction {
                 output(ID, intermediaryAgreement)
@@ -76,21 +75,21 @@ class DirectAgreementContractTest {
     }
 
     @Test
-    fun `Create transaction must have INTERMEDIATE status`() {
+    fun `Create transaction output must have INTERMEDIATE status`() {
         ledgerServices.ledger {
             transaction {
                 output(ID, directAgreement)
                 command(
                         listOf(testIntermediary.publicKey, testPartyA.publicKey),
                         DirectAgreementContract.Commands.Create())
-                fails()
+                failsWith("output should have status INTERMEDIATE")
             }
             transaction {
                 output(ID, completeAgreement)
                 command(
                         listOf(testIntermediary.publicKey, testPartyA.publicKey),
                         DirectAgreementContract.Commands.Create())
-                fails()
+                failsWith("output should have status INTERMEDIATE")
             }
         }
     }
@@ -103,12 +102,12 @@ class DirectAgreementContractTest {
                 command(
                         listOf(testPartyA.publicKey, testPartyB.publicKey, testOracle.publicKey),
                         DirectAgreementContract.Commands.GoToDirect(testIntermediary.party, true))
-                fails()
+                failsWith("One LegalAgreementState should be consumed when creating Direct")
             }
         }
     }
 
-    @Test
+    @Test @Ignore("This is the same test as Create transaction output must have INTERMEDIATE status")
     fun `Direct transaction can only be done via GoToDirect command`() {
         ledgerServices.ledger {
             transaction {
@@ -116,7 +115,7 @@ class DirectAgreementContractTest {
                 command(
                         listOf(testPartyA.publicKey, testPartyB.publicKey),
                         DirectAgreementContract.Commands.Create())
-                fails()
+                failsWith("output should have status INTERMEDIATE")
             }
         }
     }
@@ -144,37 +143,37 @@ class DirectAgreementContractTest {
                 command(
                         listOf(testIntermediary.publicKey, testPartyA.publicKey, testOracle.publicKey),
                         DirectAgreementContract.Commands.GoToDirect(testIntermediary.party, true))
-                fails()
+                failsWith("input should have status INTERMEDIATE")
             }
             transaction {
-                output(ID, completeAgreement)
+                input(ID, completeAgreement)
                 output(ID, directAgreement)
                 command(
-                        listOf(testPartyA.publicKey, testPartyB.publicKey),
+                        listOf(testPartyA.publicKey, testPartyB.publicKey, testOracle.publicKey),
                         DirectAgreementContract.Commands.GoToDirect(testIntermediary.party, true))
-                fails()
+                failsWith("input should have status INTERMEDIATE")
             }
         }
     }
 
     @Test
-    fun `Direct transaction must be signed by PartyA and PartyB only`() {
+    fun `Direct transaction must be signed by PartyA, PartyB and oracle only`() {
         ledgerServices.ledger {
             transaction {
                 input(ID, intermediaryAgreement)
                 output(ID, directAgreement)
                 command(
                         listOf(testIntermediary.publicKey, testPartyB.publicKey),
-                        DirectAgreementContract.Commands.Create())
-                fails()
+                        DirectAgreementContract.Commands.GoToDirect(testIntermediary.party, true))
+                failsWith("must be only 3 signers")
             }
             transaction {
                 input(ID, intermediaryAgreement)
                 output(ID, directAgreement)
                 command(
-                        listOf(testPartyA.publicKey, testIntermediary.publicKey),
-                        DirectAgreementContract.Commands.Create())
-                fails()
+                        listOf(testPartyA.publicKey, testPartyB.publicKey, testIntermediary.publicKey, testOracle.publicKey),
+                        DirectAgreementContract.Commands.GoToDirect(testIntermediary.party, true))
+                failsWith("must be only 3 signers")
             }
         }
     }
@@ -188,7 +187,7 @@ class DirectAgreementContractTest {
                 command(
                         listOf(testPartyA.publicKey, testPartyB.publicKey, testOracle.publicKey),
                         DirectAgreementContract.Commands.GoToDirect(testIntermediary.party, true))
-                fails()
+                failsWith("output value should be equal to the input value")
             }
         }
     }
@@ -199,27 +198,35 @@ class DirectAgreementContractTest {
         ledgerServices.ledger {
             transaction {
                 input(ID, intermediaryAgreement)
-                output(ID, directAgreement.copy(partyB = testForeignParty.party))
+                output(ID, directAgreement.copy(intermediary = testForeignParty.party))
                 command(
-                        listOf(testPartyA.publicKey, testForeignParty.publicKey, testOracle.publicKey),
+                        listOf(testPartyA.publicKey, testPartyB.publicKey, testOracle.publicKey),
                         DirectAgreementContract.Commands.GoToDirect(testIntermediary.party, true))
-                fails()
+                failsWith("intermediary should be the same entity on both states")
             }
             transaction {
                 input(ID, intermediaryAgreement)
                 output(ID, directAgreement.copy(partyA = testForeignParty.party))
                 command(
-                        listOf(testForeignParty.publicKey, testPartyB.publicKey, testOracle.publicKey),
+                        listOf(testPartyA.publicKey, testPartyB.publicKey, testOracle.publicKey),
                         DirectAgreementContract.Commands.GoToDirect(testIntermediary.party, true))
-                fails()
+                failsWith("partyA should be the same entity on both states")
+            }
+            transaction {
+                input(ID, intermediaryAgreement)
+                output(ID, directAgreement.copy(partyB = testForeignParty.party))
+                command(
+                        listOf(testPartyA.publicKey, testPartyB.publicKey, testOracle.publicKey),
+                        DirectAgreementContract.Commands.GoToDirect(testIntermediary.party, true))
+                failsWith("partyB should be the same entity on both states")
             }
             transaction {
                 input(ID, intermediaryAgreement)
                 output(ID, directAgreement.copy(oracle = testForeignParty.party))
                 command(
-                        listOf(testForeignParty.publicKey, testPartyB.publicKey, testOracle.publicKey),
+                        listOf(testPartyA.publicKey, testPartyB.publicKey, testOracle.publicKey),
                         DirectAgreementContract.Commands.GoToDirect(testIntermediary.party, true))
-                fails()
+                failsWith("oracle should be the same entity on both states")
             }
         }
     }
@@ -232,13 +239,13 @@ class DirectAgreementContractTest {
                 command(
                         listOf(testPartyA.publicKey, testIntermediary.publicKey),
                         DirectAgreementContract.Commands.Finalise())
-                fails()
+                failsWith("LegalAgreementState should be consumed when creating Direct")
             }
         }
     }
 
     @Test
-    fun `Complete transaction input must of type intermediary or direct`() {
+    fun `Complete transaction input must be of type intermediary or direct`() {
         ledgerServices.ledger {
             transaction {
                 input(ID, intermediaryAgreement)
@@ -268,7 +275,7 @@ class DirectAgreementContractTest {
                 command(
                         listOf(testPartyA.publicKey, testIntermediary.publicKey),
                         DirectAgreementContract.Commands.Finalise())
-                fails()
+                failsWith("output should have status COMPLETED")
             }
             transaction {
                 input(ID, directAgreement)
@@ -276,12 +283,12 @@ class DirectAgreementContractTest {
                 command(
                         listOf(testPartyA.publicKey, testPartyB.publicKey),
                         DirectAgreementContract.Commands.Finalise())
-                fails()
+                failsWith("output should have status COMPLETED")
             }
         }
     }
 
-    @Test
+    @Test @Ignore("Same as previous tests")
     fun `Complete transaction can only be done via Finalise command`() {
         ledgerServices.ledger {
             transaction {
@@ -290,14 +297,14 @@ class DirectAgreementContractTest {
                 command(
                         listOf(testPartyA.publicKey, testIntermediary.publicKey, testOracle.publicKey),
                         DirectAgreementContract.Commands.GoToDirect(testIntermediary.party, true))
-                fails()
+                failsWith("output should have status DIRECT")
             }
             transaction {
                 output(ID, completeAgreement)
                 command(
                         listOf(testPartyA.publicKey, testIntermediary.publicKey),
                         DirectAgreementContract.Commands.Create())
-                fails()
+                failsWith("output should have status INTERMEDIATE")
             }
             transaction {
                 input(ID, intermediaryAgreement)
@@ -319,7 +326,7 @@ class DirectAgreementContractTest {
                 command(
                         listOf(testPartyA.publicKey, testIntermediary.publicKey),
                         DirectAgreementContract.Commands.Finalise())
-                fails()
+                failsWith("output value should be equal to the input value")
             }
         }
     }
@@ -333,7 +340,7 @@ class DirectAgreementContractTest {
                 command(
                         listOf(testPartyA.publicKey),
                         DirectAgreementContract.Commands.Finalise())
-                fails()
+                failsWith("must be only 2 signers")
             }
             transaction {
                 input(ID, intermediaryAgreement)
@@ -341,7 +348,7 @@ class DirectAgreementContractTest {
                 command(
                         listOf(testPartyA.publicKey, testPartyB.publicKey, testOracle.publicKey),
                         DirectAgreementContract.Commands.Finalise())
-                fails()
+                failsWith("must be only 2 signers")
             }
         }
     }
@@ -355,7 +362,7 @@ class DirectAgreementContractTest {
                 command(
                         listOf(testPartyA.publicKey, testPartyB.publicKey),
                         DirectAgreementContract.Commands.Finalise())
-                fails()
+                failsWith("PartyA and Intermediary must be the signers")
             }
             transaction {
                 input(ID, intermediaryAgreement)
@@ -363,7 +370,7 @@ class DirectAgreementContractTest {
                 command(
                         listOf(testPartyA.publicKey, testOracle.publicKey),
                         DirectAgreementContract.Commands.Finalise())
-                fails()
+                failsWith("PartyA and Intermediary must be the signers")
             }
             transaction {
                 input(ID, intermediaryAgreement)
@@ -385,7 +392,7 @@ class DirectAgreementContractTest {
                 command(
                         listOf(testPartyA.publicKey, testIntermediary.publicKey),
                         DirectAgreementContract.Commands.Finalise())
-                fails()
+                failsWith("PartyA and PartyB must be the signers")
             }
             transaction {
                 input(ID, directAgreement)
@@ -393,7 +400,7 @@ class DirectAgreementContractTest {
                 command(
                         listOf(testPartyA.publicKey, testOracle.publicKey),
                         DirectAgreementContract.Commands.Finalise())
-                fails()
+                failsWith("PartyA and PartyB must be the signers")
             }
             transaction {
                 input(ID, directAgreement)
@@ -414,25 +421,33 @@ class DirectAgreementContractTest {
                 input(ID, intermediaryAgreement)
                 output(ID, completeAgreement.copy(intermediary = testForeignParty.party))
                 command(
-                        listOf(testPartyA.publicKey, testForeignParty.publicKey),
+                        listOf(testPartyA.publicKey, testIntermediary.publicKey),
                         DirectAgreementContract.Commands.Finalise())
-                fails()
+                failsWith("intermediary should be the same entity on both states")
             }
             transaction {
                 input(ID, intermediaryAgreement)
                 output(ID, completeAgreement.copy(partyA = testForeignParty.party))
                 command(
-                        listOf(testForeignParty.publicKey, testIntermediary.publicKey),
+                        listOf(testPartyA.publicKey, testIntermediary.publicKey),
                         DirectAgreementContract.Commands.Finalise())
-                fails()
+                failsWith("partyA should be the same entity on both states")
             }
             transaction {
                 input(ID, directAgreement)
                 output(ID, completeAgreement.copy(partyB = testForeignParty.party))
                 command(
-                        listOf(testPartyA.publicKey, testForeignParty.publicKey),
+                        listOf(testPartyA.publicKey, testPartyB.publicKey),
                         DirectAgreementContract.Commands.Finalise())
-                fails()
+                failsWith("partyB should be the same entity on both states")
+            }
+            transaction {
+                input(ID, directAgreement)
+                output(ID, completeAgreement.copy(oracle = testForeignParty.party))
+                command(
+                        listOf(testPartyA.publicKey, testPartyB.publicKey),
+                        DirectAgreementContract.Commands.Finalise())
+                failsWith("oracle should be the same entity on both states")
             }
         }
     }

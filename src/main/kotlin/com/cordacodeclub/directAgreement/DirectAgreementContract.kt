@@ -83,10 +83,10 @@ class DirectAgreementContract : Contract {
 
                 when (input.status) {
                     LegalAgreementState.Status.INTERMEDIATE -> requireThat {
-                        "PartyA and Intermidiate must be the signers" using (command.signers.containsAll(listOf(output.partyA.owningKey, output.intermediary.owningKey)))
+                        "PartyA and Intermediary must be the signers" using (command.signers.containsAll(listOf(input.partyA.owningKey, input.intermediary.owningKey)))
                     }
                     LegalAgreementState.Status.DIRECT -> requireThat {
-                        "PartyA and PartyB must be the signers" using (command.signers.containsAll(listOf(output.partyA.owningKey, output.partyB.owningKey)))
+                        "PartyA and PartyB must be the signers" using (command.signers.containsAll(listOf(input.partyA.owningKey, input.partyB.owningKey)))
                     }
                     LegalAgreementState.Status.COMPLETED -> throw IllegalArgumentException("Should not be Completed input")
                 }
