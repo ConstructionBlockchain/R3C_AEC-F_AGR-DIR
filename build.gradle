@@ -2,13 +2,19 @@ buildscript {
     ext {
         corda_release_group = 'net.corda'
         corda_release_version = '3.3-corda'
+        corda_gradle_plugins_version = '3.1.0'
         kotlin_version = '1.2.71'
+        quasar_version = '0.7.9'
     }
 
     repositories {
         mavenLocal()
         mavenCentral()
         jcenter()
+    }
+
+    dependencies {
+        classpath "net.corda.plugins:quasar-utils:$corda_gradle_plugins_version"
     }
 }
 
@@ -27,6 +33,8 @@ repositories {
 
     // The following was necessary to get the test sources to be aware of the main sources...
     maven { url 'https://ci-artifactory.corda.r3cev.com/artifactory/corda' }
+
+    apply plugin: 'net.corda.plugins.quasar-utils'
 }
 
 dependencies {
