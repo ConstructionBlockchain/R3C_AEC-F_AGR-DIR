@@ -1,6 +1,8 @@
-package com.cordacodeclub.directAgreement
+package com.cordacodeclub.directAgreement.flow
 
 import co.paralleluniverse.fibers.Suspendable
+import com.cordacodeclub.directAgreement.state.LegalAgreementState
+import com.cordacodeclub.directAgreement.contract.DirectAgreementContract
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.requireThat
@@ -8,18 +10,21 @@ import net.corda.core.flows.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
-import java.lang.IllegalArgumentException
-import java.util.function.Predicate
 
-object DirectAgreementFlow {
+
+//This flow is to be started by PartyA and either of two parties depending on the input state status.
+//In this case it can be identified as PartyC
+
+object EndAgreementFlow{
 
     @InitiatingFlow
     @StartableByRPC
     /**
-     * This flow can be started by partyA or partyB.
-     * And it has to be signed by partyA and partyB.
+     * This flow can be started by partyA or PartyB
+     * And it has to be signed by partyA or PartyB]
      */
-    class DirectAgreementFlowInitiator(
+
+    class EndAgreementFlowInitiator(
             val inputStateAndRef: StateAndRef<LegalAgreementState>,
             override val progressTracker: ProgressTracker = tracker()) : FlowLogic<Unit>() {
 
@@ -28,15 +33,9 @@ object DirectAgreementFlow {
          * checkpoint is reached in the code. See the 'progressTracker.currentStep' expressions within the call() function.
          */
         companion object {
-            object QUERYING_ORACLE: ProgressTracker.Step("Querying the BustPartyOracle.") {
-                override fun childProgressTracker() = BustPartyOracleFlow.QueryBustPartyInitiator.tracker()
-            }
             object GENERATING_TRANSACTION : ProgressTracker.Step("Generating transaction based on new IOU.")
             object VERIFYING_TRANSACTION : ProgressTracker.Step("Verifying contract constraints.")
             object SIGNING_TRANSACTION : ProgressTracker.Step("Signing transaction with our private key.")
-            object GATHERING_ORACLE_SIG : ProgressTracker.Step("Gathering the oracle's signature.") {
-                override fun childProgressTracker(): ProgressTracker = BustPartyOracleFlow.SignBustParty.tracker()
-            }
             object GATHERING_SIGS : ProgressTracker.Step("Gathering the counterparty's signature.") {
                 override fun childProgressTracker() = CollectSignaturesFlow.tracker()
             }
@@ -45,11 +44,9 @@ object DirectAgreementFlow {
             }
 
             fun tracker() = ProgressTracker(
-                    QUERYING_ORACLE,
                     GENERATING_TRANSACTION,
                     VERIFYING_TRANSACTION,
                     SIGNING_TRANSACTION,
-                    GATHERING_ORACLE_SIG,
                     GATHERING_SIGS,
                     FINALISING_TRANSACTION)
         }
@@ -57,23 +54,22 @@ object DirectAgreementFlow {
         /** The flow logic is encapsulated within the call() method. */
         @Suspendable
         override fun call() {
-            // We retrieve the first notary identity from the network map.
+            // We retrieve the notary identity from the network map.
             val notary = serviceHub.networkMapCache.notaryIdentities[0]
 
-            progressTracker.currentStep = QUERYING_ORACLE
-            // We create the transaction output state from the input.
-            val inputState = inputStateAndRef.state.data
-            val outputState = inputState.copy(status = LegalAgreementState.Status.DIRECT)
-
-            val isBustFromOracle = subFlow(BustPartyOracleFlow.QueryBustPartyInitiator(
-                    inputState.oracle,
-                    inputState.intermediary,
-                    QUERYING_ORACLE.childProgressTracker()))
-
             progressTracker.currentStep = GENERATING_TRANSACTION
-            val cmd = Command(
-                    DirectAgreementContract.Commands.GoToDirect(inputState.intermediary, isBustFromOracle),
-                    listOf(inputState.partyA.owningKey, inputState.partyB.owningKey, inputState.oracle.owningKey))
+            // We create the transaction output state from the input
+            val inputState = inputStateAndRef.state.data
+            val outputState = inputState.copy(status = LegalAgreementState.Status.COMPLETED)
+
+            // We create the transaction components based on the input state
+            val cmd = if (inputState.status == LegalAgreementState.Status.INTERMEDIATE) {
+                Command(DirectAgreementContract.Commands.Finalise(),
+                        listOf(inputState.partyA.owningKey, inputState.intermediary.owningKey))
+            } else {
+                Command(DirectAgreementContract.Commands.Finalise(),
+                        listOf(inputState.partyA.owningKey, inputState.partyB.owningKey))
+            }
 
             val txBuilder = TransactionBuilder(notary = notary)
 
@@ -88,34 +84,22 @@ object DirectAgreementFlow {
 
             progressTracker.currentStep = SIGNING_TRANSACTION
             // Signing the transaction
-            val signedTx1 = serviceHub.signInitialTransaction(txBuilder)
+            val signedTx = serviceHub.signInitialTransaction(txBuilder)
 
-            // Asking the oracle to sign the transaction
-            // For privacy reasons, we only want to expose to the oracle any commands of type `GoToDirect`
-            // that require its signature.
-            val ftx = signedTx1.buildFilteredTransaction(Predicate {
-                when (it) {
-                    is Command<*> -> inputState.oracle.owningKey in it.signers &&
-                            it.value is DirectAgreementContract.Commands.GoToDirect
-                    else -> false
-                }
-            })
-
-            progressTracker.currentStep = GATHERING_ORACLE_SIG
-            val oracleSignature = subFlow(BustPartyOracleFlow.SignBustParty(
-                    inputState.oracle,
-                    ftx,
-                    GATHERING_ORACLE_SIG.childProgressTracker()))
-            val signedTx = signedTx1.withAdditionalSignature(oracleSignature)
-
-
-            // Creating a session with the other party
-            val otherParty = if (ourIdentity == inputState.partyA)
-                inputState.partyB
-            else (if (ourIdentity == inputState.partyB)
-                inputState.partyA
-            else throw IllegalArgumentException("Unexpected party"))
-
+            // Creating a session with the other party depending on the input state
+            val otherParty = when (inputState.status) {
+                LegalAgreementState.Status.INTERMEDIATE ->
+                    if (ourIdentity == inputState.partyA)
+                        inputState.partyB
+                    else
+                        inputState.partyA
+                LegalAgreementState.Status.DIRECT ->
+                    if (ourIdentity == inputState.partyA)
+                        inputState.intermediary
+                    else
+                        inputState.partyA
+                else -> throw java.lang.IllegalArgumentException("Unexpected party")
+            }
             progressTracker.currentStep = GATHERING_SIGS
             val otherPartySession = initiateFlow(otherParty)
 
@@ -126,7 +110,7 @@ object DirectAgreementFlow {
                     GATHERING_SIGS.childProgressTracker()))
 
             progressTracker.currentStep = FINALISING_TRANSACTION
-            // We finalise the transaction with the notary.
+            // We finalise the transaction with the notary
             subFlow(FinalityFlow(
                     fullySignedTx,
                     FINALISING_TRANSACTION.childProgressTracker()))
@@ -134,11 +118,11 @@ object DirectAgreementFlow {
     }
 
     /**
-     * Define DirectAgreementFlowResponder
+     * Define EndAgreementFlowResponder
      * We want to be able to call this flow only when we confirm that we are expecting it.
      */
-    @InitiatedBy(DirectAgreementFlowInitiator::class)
-    class DirectAgreementFlowResponder(
+    @InitiatedBy(EndAgreementFlowInitiator::class)
+    class EndAgreementFlowResponder(
             val otherPartySession: FlowSession,
             val isOk: Boolean,
             override val progressTracker: ProgressTracker = tracker()) : FlowLogic<Unit>() {

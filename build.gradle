@@ -32,6 +32,7 @@ repositories {
 
     // The following was necessary to get the test sources to be aware of the main sources...
     maven { url 'https://ci-artifactory.corda.r3cev.com/artifactory/corda' }
+    maven { url 'https://jitpack.io' }
 }
 
 apply plugin: 'net.corda.plugins.quasar-utils'
@@ -45,6 +46,15 @@ dependencies {
 
     // This fixed our MissingContractAttachments error in test
     cordapp "$corda_release_group:corda-finance:$corda_release_version"
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+    kotlinOptions {
+        languageVersion = "1.1"
+        apiVersion = "1.1"
+        jvmTarget = "1.8"
+        javaParameters = true   // Useful for reflection.
+    }
 }
 
 compileKotlin {

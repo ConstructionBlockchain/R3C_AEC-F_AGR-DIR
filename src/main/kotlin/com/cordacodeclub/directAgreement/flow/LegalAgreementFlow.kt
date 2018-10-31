@@ -1,8 +1,9 @@
-package com.cordacodeclub.directAgreement
+package com.cordacodeclub.directAgreement.flow
 
 import co.paralleluniverse.fibers.Suspendable
-import com.cordacodeclub.directAgreement.DirectAgreementContract.Commands.Create
-import com.cordacodeclub.directAgreement.DirectAgreementContract.Companion.ID
+import com.cordacodeclub.directAgreement.state.LegalAgreementState
+import com.cordacodeclub.directAgreement.contract.DirectAgreementContract.Commands.Create
+import com.cordacodeclub.directAgreement.contract.DirectAgreementContract.Companion.ID
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.requireThat
@@ -105,10 +106,8 @@ object LegalAgreementFlow {
      * As seen here https://docs.corda.net/flow-state-machines.html#a-two-party-trading-flow
      */
     @InitiatedBy(LegalAgreementFlowInitiator::class)
-    class LegalAgreementFlowResponder(
+    open class LegalAgreementFlowResponder(
             val otherPartySession: FlowSession,
-            val partyB: Party,
-            val value: Long,
             override val progressTracker: ProgressTracker = tracker()) : FlowLogic<Unit>() {
 
         /**
@@ -131,10 +130,16 @@ object LegalAgreementFlow {
                     "This must be a LegalAgreement state." using (output is LegalAgreementState)
                     val legalAgreement = output as LegalAgreementState
                     "The legal agreement's value can't be negative." using (legalAgreement.value.quantity > 0)
-                    "The legal agreement's value should be as expected." using (legalAgreement.value.quantity == value)
+
+                    // We need a way to have this value checked manually
+//                    "The legal agreement's value should be as expected." using (legalAgreement.value.quantity == value)
+
                     "The intermediary should be the sender." using (legalAgreement.intermediary == otherPartySession.counterparty)
                     "PartyA should be me." using (legalAgreement.partyA == ourIdentity)
-                    "PartyB should be as expected." using (legalAgreement.partyB == partyB)
+
+                    // We need a way to have this party checked manually
+//                    "PartyB should be as expected." using (legalAgreement.partyB == partyB)
+
                     val contract = stx.tx.outputs.single().contract
                     "This must be a DirectAgreementContract." using (contract == ID)
                     progressTracker.currentStep = SIGNING_TRANSACTION
