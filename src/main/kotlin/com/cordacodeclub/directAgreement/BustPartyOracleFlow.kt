@@ -12,20 +12,38 @@ object BustPartyOracleFlow {
 
     @InitiatingFlow
     @StartableByRPC
-    class QueryBustPartyInitiator(val oracle: Party, val party: Party) : FlowLogic<Boolean>() {
+    class QueryBustPartyInitiator(
+            val oracle: Party,
+            val party: Party,
+            override val progressTracker: ProgressTracker = QueryBustPartyInitiator.tracker()) : FlowLogic<Boolean>() {
+
+        companion object {
+            object RECEIVING_SENDING : ProgressTracker.Step("Sending and receiving partly infornation request to " +
+                    "BustPartyOracle.")
+
+            @JvmStatic
+            fun tracker() = ProgressTracker(RECEIVING_SENDING)
+        }
+
         @Suspendable
-        override fun call() = initiateFlow(oracle).sendAndReceive<Boolean>(party).unwrap { it }
+        override fun call(): Boolean {
+            progressTracker.currentStep = RECEIVING_SENDING
+            return initiateFlow(oracle).sendAndReceive<Boolean>(party).unwrap { it }
+        }
     }
 
     @InitiatedBy(QueryBustPartyInitiator::class)
-    open class QueryBustPartyHandler(val session: FlowSession) : FlowLogic<Unit>() {
+    open class QueryBustPartyHandler(
+            val session: FlowSession,
+            override val progressTracker: ProgressTracker = QueryBustPartyHandler.tracker()) : FlowLogic<Unit>() {
         companion object {
             object RECEIVING : ProgressTracker.Step("Receiving query request.")
             object FETCHING : ProgressTracker.Step("Fetching bust status.")
             object SENDING : ProgressTracker.Step("Sending query response.")
-        }
 
-        override val progressTracker = ProgressTracker(RECEIVING, FETCHING, SENDING)
+            @JvmStatic
+            fun tracker() = ProgressTracker(RECEIVING, FETCHING, SENDING)
+        }
 
         open fun bustPartyOracle() = serviceHub.cordaService(BustPartyOracle::class.java)
 
@@ -49,22 +67,41 @@ object BustPartyOracleFlow {
 
     @InitiatingFlow
     @StartableByRPC
-    class SignBustParty(val oracle: Party, val ftx: FilteredTransaction) : FlowLogic<TransactionSignature>() {
-        @Suspendable override fun call(): TransactionSignature {
+    class SignBustParty(
+            val oracle: Party,
+            val ftx: FilteredTransaction,
+            override val progressTracker: ProgressTracker = SignBustParty.tracker()) : FlowLogic<TransactionSignature>() {
+
+        companion object {
+            object RECEIVING_SENDING : ProgressTracker.Step("Sending and receiving partly signed transaction to " +
+                    "BustPartyOracle.")
+
+            @JvmStatic
+            fun tracker() = ProgressTracker(RECEIVING_SENDING)
+        }
+
+        @Suspendable
+        override fun call(): TransactionSignature {
+            progressTracker.currentStep = RECEIVING_SENDING
             val session = initiateFlow(oracle)
             return session.sendAndReceive<TransactionSignature>(ftx).unwrap { it }
         }
     }
 
     @InitiatedBy(SignBustParty::class)
-    open class SignHandler(val session: FlowSession) : FlowLogic<Unit>() {
+    open class SignHandler(
+            val session: FlowSession,
+            override val progressTracker: ProgressTracker = tracker()) : FlowLogic<Unit>() {
+
         companion object {
             object RECEIVING : ProgressTracker.Step("Receiving sign request.")
             object SIGNING : ProgressTracker.Step("Signing filtered transaction.")
             object SENDING : ProgressTracker.Step("Sending sign response.")
-        }
 
-        override val progressTracker = ProgressTracker(RECEIVING, SIGNING, SENDING)
+
+            @JvmStatic
+            fun tracker() = ProgressTracker(RECEIVING, SIGNING, SENDING)
+        }
 
         open fun bustPartyOracle() = serviceHub.cordaService(BustPartyOracle::class.java)
 
