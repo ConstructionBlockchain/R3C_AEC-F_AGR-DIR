@@ -1,4 +1,4 @@
-package com.cordacodeclub.directAgreement
+package com.cordacodeclub.directAgreement.state
 
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState

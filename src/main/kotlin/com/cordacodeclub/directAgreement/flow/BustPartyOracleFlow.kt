@@ -1,6 +1,7 @@
-package com.cordacodeclub.directAgreement
+package com.cordacodeclub.directAgreement.flow
 
 import co.paralleluniverse.fibers.Suspendable
+import com.cordacodeclub.directAgreement.oracle.BustPartyOracle
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
@@ -15,7 +16,7 @@ object BustPartyOracleFlow {
     class QueryBustPartyInitiator(
             val oracle: Party,
             val party: Party,
-            override val progressTracker: ProgressTracker = QueryBustPartyInitiator.tracker()) : FlowLogic<Boolean>() {
+            override val progressTracker: ProgressTracker = tracker()) : FlowLogic<Boolean>() {
 
         companion object {
             object RECEIVING_SENDING : ProgressTracker.Step("Sending and receiving partly infornation request to " +
@@ -35,7 +36,8 @@ object BustPartyOracleFlow {
     @InitiatedBy(QueryBustPartyInitiator::class)
     open class QueryBustPartyHandler(
             val session: FlowSession,
-            override val progressTracker: ProgressTracker = QueryBustPartyHandler.tracker()) : FlowLogic<Unit>() {
+            override val progressTracker: ProgressTracker = tracker()) : FlowLogic<Unit>() {
+
         companion object {
             object RECEIVING : ProgressTracker.Step("Receiving query request.")
             object FETCHING : ProgressTracker.Step("Fetching bust status.")
@@ -70,7 +72,7 @@ object BustPartyOracleFlow {
     class SignBustParty(
             val oracle: Party,
             val ftx: FilteredTransaction,
-            override val progressTracker: ProgressTracker = SignBustParty.tracker()) : FlowLogic<TransactionSignature>() {
+            override val progressTracker: ProgressTracker = tracker()) : FlowLogic<TransactionSignature>() {
 
         companion object {
             object RECEIVING_SENDING : ProgressTracker.Step("Sending and receiving partly signed transaction to " +

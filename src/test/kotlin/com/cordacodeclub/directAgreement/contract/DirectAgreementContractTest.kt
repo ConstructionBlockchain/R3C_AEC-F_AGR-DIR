@@ -1,13 +1,14 @@
-package com.cordacodeclub.directAgreement
+package com.cordacodeclub.directAgreement.contract
 
-import com.cordacodeclub.directAgreement.DirectAgreementContract.Companion.ID
+import com.cordacodeclub.directAgreement.contract.DirectAgreementContract
+import com.cordacodeclub.directAgreement.contract.DirectAgreementContract.Companion.ID
+import com.cordacodeclub.directAgreement.state.LegalAgreementState
 import net.corda.core.contracts.Amount
 import net.corda.core.identity.CordaX500Name
 import net.corda.finance.USD
 import net.corda.testing.core.TestIdentity
 import net.corda.testing.node.MockServices
 import net.corda.testing.node.ledger
-import org.junit.Ignore
 import org.junit.Test
 import java.util.*
 
@@ -25,20 +26,6 @@ class DirectAgreementContractTest {
             value = Amount(10, Currency.getInstance("GBP")))
     private val directAgreement = intermediaryAgreement.copy(status = LegalAgreementState.Status.DIRECT)
     private val completeAgreement = intermediaryAgreement.copy(status = LegalAgreementState.Status.COMPLETED)
-
-    @Test @Ignore("This is testing the Corda framework here, not our code")
-    fun `Create transaction must include Create command`() {
-        ledgerServices.ledger {
-            transaction {
-                output(ID, intermediaryAgreement)
-                failsWith("must contain at least one command")
-                command(
-                        listOf(testIntermediary.publicKey, testPartyA.publicKey),
-                        DirectAgreementContract.Commands.Create())
-                verifies()
-            }
-        }
-    }
 
     @Test
     fun `Create transaction must have no input`() {
@@ -103,19 +90,6 @@ class DirectAgreementContractTest {
                         listOf(testPartyA.publicKey, testPartyB.publicKey, testOracle.publicKey),
                         DirectAgreementContract.Commands.GoToDirect(testIntermediary.party, true))
                 failsWith("One LegalAgreementState should be consumed when creating Direct")
-            }
-        }
-    }
-
-    @Test @Ignore("This is the same test as Create transaction output must have INTERMEDIATE status")
-    fun `Direct transaction can only be done via GoToDirect command`() {
-        ledgerServices.ledger {
-            transaction {
-                output(ID, directAgreement)
-                command(
-                        listOf(testPartyA.publicKey, testPartyB.publicKey),
-                        DirectAgreementContract.Commands.Create())
-                failsWith("output should have status INTERMEDIATE")
             }
         }
     }
@@ -284,35 +258,6 @@ class DirectAgreementContractTest {
                         listOf(testPartyA.publicKey, testPartyB.publicKey),
                         DirectAgreementContract.Commands.Finalise())
                 failsWith("output should have status COMPLETED")
-            }
-        }
-    }
-
-    @Test @Ignore("Same as previous tests")
-    fun `Complete transaction can only be done via Finalise command`() {
-        ledgerServices.ledger {
-            transaction {
-                input(ID, intermediaryAgreement)
-                output(ID, completeAgreement)
-                command(
-                        listOf(testPartyA.publicKey, testIntermediary.publicKey, testOracle.publicKey),
-                        DirectAgreementContract.Commands.GoToDirect(testIntermediary.party, true))
-                failsWith("output should have status DIRECT")
-            }
-            transaction {
-                output(ID, completeAgreement)
-                command(
-                        listOf(testPartyA.publicKey, testIntermediary.publicKey),
-                        DirectAgreementContract.Commands.Create())
-                failsWith("output should have status INTERMEDIATE")
-            }
-            transaction {
-                input(ID, intermediaryAgreement)
-                output(ID, completeAgreement)
-                command(
-                        listOf(testPartyA.publicKey, testIntermediary.publicKey),
-                        DirectAgreementContract.Commands.Finalise())
-                verifies()
             }
         }
     }

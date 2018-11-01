@@ -1,5 +1,6 @@
-package com.cordacodeclub.directAgreement
+package com.cordacodeclub.directAgreement.oracle
 
+import com.cordacodeclub.directAgreement.contract.DirectAgreementContract
 import net.corda.core.contracts.Command
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.Party
