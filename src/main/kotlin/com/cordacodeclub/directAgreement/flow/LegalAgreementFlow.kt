@@ -25,7 +25,7 @@ object LegalAgreementFlow {
             val agreementValue: Amount<Currency>,
             val partyA: Party,
             val partyB: Party,
-            val oracle: Party) : FlowLogic<Unit>() {
+            val oracle: Party) : FlowLogic<SignedTransaction>() {
 
         /**
          * The progress tracker checkpoints each stage of the flow and outputs the specified messages when each
@@ -54,7 +54,7 @@ object LegalAgreementFlow {
 
         /** The flow logic is encapsulated within the call() method. */
         @Suspendable
-        override fun call() {
+        override fun call(): SignedTransaction {
             // We retrieve the first notary identity from the network map.
             val notary = serviceHub.networkMapCache.notaryIdentities[0]
 
@@ -95,7 +95,7 @@ object LegalAgreementFlow {
 
             progressTracker.currentStep = FINALISING_TRANSACTION
             // We finalise the transaction with the notary.
-            subFlow(FinalityFlow(
+            return subFlow(FinalityFlow(
                     fullySignedTx,
                     FINALISING_TRANSACTION.childProgressTracker()))
         }
