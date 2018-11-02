@@ -35,8 +35,7 @@ object BustPartyOracleFlow {
 
     @InitiatedBy(QueryBustPartyInitiator::class)
     open class QueryBustPartyHandler(
-            val session: FlowSession,
-            override val progressTracker: ProgressTracker = tracker()) : FlowLogic<Unit>() {
+            val session: FlowSession) : FlowLogic<Unit>() {
 
         companion object {
             object RECEIVING : ProgressTracker.Step("Receiving query request.")
@@ -46,6 +45,8 @@ object BustPartyOracleFlow {
             @JvmStatic
             fun tracker() = ProgressTracker(RECEIVING, FETCHING, SENDING)
         }
+
+        override val progressTracker: ProgressTracker = tracker()
 
         open fun bustPartyOracle() = serviceHub.cordaService(BustPartyOracle::class.java)
 
@@ -92,8 +93,9 @@ object BustPartyOracleFlow {
 
     @InitiatedBy(SignBustParty::class)
     open class SignHandler(
-            val session: FlowSession,
-            override val progressTracker: ProgressTracker = tracker()) : FlowLogic<Unit>() {
+            val session: FlowSession) : FlowLogic<Unit>() {
+
+        override val progressTracker: ProgressTracker = tracker()
 
         companion object {
             object RECEIVING : ProgressTracker.Step("Receiving sign request.")

@@ -123,9 +123,7 @@ object EndAgreementFlow{
      */
     @InitiatedBy(EndAgreementFlowInitiator::class)
     class EndAgreementFlowResponder(
-            val otherPartySession: FlowSession,
-            val isOk: Boolean,
-            override val progressTracker: ProgressTracker = tracker()) : FlowLogic<Unit>() {
+            val otherPartySession: FlowSession) : FlowLogic<Unit>() {
 
         /**
          * The progress tracker checkpoints each stage of the flow and outputs the specified messages when each
@@ -138,12 +136,15 @@ object EndAgreementFlow{
             fun tracker() = ProgressTracker(CHECKING_VALIDITY, SIGNING_TRANSACTION)
         }
 
+        override val progressTracker: ProgressTracker = tracker()
+
         @Suspendable
         override fun call() {
             val signTransactionFlow = object : SignTransactionFlow(otherPartySession, SignTransactionFlow.tracker()) {
                 override fun checkTransaction(stx: SignedTransaction) = requireThat {
                     progressTracker.currentStep = CHECKING_VALIDITY
-                    "This flow must have been approved" using (isOk)
+                    // We need to have this infoplaced in the vault beforehand
+//                    "This flow must have been approved" using (isOk)
 
                     // How to confirm that this builds on an input we agreed on and of which we are party
 

@@ -25,8 +25,7 @@ object LegalAgreementFlow {
             val agreementValue: Amount<Currency>,
             val partyA: Party,
             val partyB: Party,
-            val oracle: Party,
-            override val progressTracker: ProgressTracker = tracker()) : FlowLogic<Unit>() {
+            val oracle: Party) : FlowLogic<Unit>() {
 
         /**
          * The progress tracker checkpoints each stage of the flow and outputs the specified messages when each
@@ -50,6 +49,8 @@ object LegalAgreementFlow {
                     GATHERING_SIGS,
                     FINALISING_TRANSACTION)
         }
+
+        override val progressTracker: ProgressTracker = tracker()
 
         /** The flow logic is encapsulated within the call() method. */
         @Suspendable
@@ -89,7 +90,8 @@ object LegalAgreementFlow {
             // Obtaining the counterparty's signature
             val fullySignedTx = subFlow(CollectSignaturesFlow(
                     signedTx,
-                    listOf(otherPartySession), CollectSignaturesFlow.tracker()))
+                    listOf(otherPartySession),
+                    GATHERING_SIGS.childProgressTracker()))
 
             progressTracker.currentStep = FINALISING_TRANSACTION
             // We finalise the transaction with the notary.
@@ -106,26 +108,31 @@ object LegalAgreementFlow {
      * As seen here https://docs.corda.net/flow-state-machines.html#a-two-party-trading-flow
      */
     @InitiatedBy(LegalAgreementFlowInitiator::class)
-    open class LegalAgreementFlowResponder(
-            val otherPartySession: FlowSession,
-            override val progressTracker: ProgressTracker = tracker()) : FlowLogic<Unit>() {
+        open class LegalAgreementFlowResponder(
+            val otherPartySession: FlowSession) : FlowLogic<Unit>() {
 
         /**
          * The progress tracker checkpoints each stage of the flow and outputs the specified messages when each
          * checkpoint is reached in the code. See the 'progressTracker.currentStep' expressions within the call() function.
          */
         companion object {
-            object CHECKING_VALIDITY: ProgressTracker.Step("Checking transaction validity.")
-            object SIGNING_TRANSACTION: ProgressTracker.Step("Signing transaction with our private key.")
+            object SIGNING_TRANSACTION: ProgressTracker.Step("Signing transaction with our private key.") {
+                override fun childProgressTracker(): ProgressTracker = SignTransactionFlow.tracker()
+            }
+            object SIGNED: ProgressTracker.Step("Finished signing.")
 
-            fun tracker() = ProgressTracker(CHECKING_VALIDITY, SIGNING_TRANSACTION)
+            fun tracker() = ProgressTracker(SIGNING_TRANSACTION, SIGNED)
         }
+
+        override val progressTracker: ProgressTracker = tracker()
 
         @Suspendable
         override fun call() {
-            val signTransactionFlow = object : SignTransactionFlow(otherPartySession, SignTransactionFlow.tracker()) {
+
+            val signTransactionFlow = object : SignTransactionFlow(
+                    otherPartySession,
+                    SIGNING_TRANSACTION.childProgressTracker()) {
                 override fun checkTransaction(stx: SignedTransaction) = requireThat {
-                    progressTracker.currentStep = CHECKING_VALIDITY
                     val output = stx.tx.outputs.single().data
                     "This must be a LegalAgreement state." using (output is LegalAgreementState)
                     val legalAgreement = output as LegalAgreementState
@@ -142,10 +149,10 @@ object LegalAgreementFlow {
 
                     val contract = stx.tx.outputs.single().contract
                     "This must be a DirectAgreementContract." using (contract == ID)
-                    progressTracker.currentStep = SIGNING_TRANSACTION
                 }
             }
             subFlow(signTransactionFlow)
+            progressTracker.currentStep = SIGNED
         }
     }
 }
