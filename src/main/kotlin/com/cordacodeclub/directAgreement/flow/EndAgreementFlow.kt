@@ -31,6 +31,7 @@ object EndAgreementFlow{
             val inputStateRef: StateRef,
             override val progressTracker: ProgressTracker = tracker()): FlowLogic<SignedTransaction>() {
 
+        // Useful for the shell
         constructor(txhash: String, index: Int) : this(StateRef(SecureHash.parse(txhash), index))
 
         /**

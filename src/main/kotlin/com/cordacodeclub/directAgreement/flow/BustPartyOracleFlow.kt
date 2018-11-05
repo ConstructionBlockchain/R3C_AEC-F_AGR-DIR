@@ -19,7 +19,7 @@ object BustPartyOracleFlow {
             override val progressTracker: ProgressTracker = tracker()) : FlowLogic<Boolean>() {
 
         companion object {
-            object RECEIVING_SENDING : ProgressTracker.Step("Sending and receiving partly infornation request to " +
+            object RECEIVING_SENDING : ProgressTracker.Step("Sending and receiving partly information request to " +
                     "BustPartyOracle.")
 
             @JvmStatic
