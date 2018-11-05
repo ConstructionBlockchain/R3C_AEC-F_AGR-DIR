@@ -5,11 +5,14 @@ import com.cordacodeclub.directAgreement.state.LegalAgreementState
 import com.cordacodeclub.directAgreement.contract.DirectAgreementContract
 import net.corda.core.contracts.Command
 import net.corda.core.contracts.StateAndRef
+import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.requireThat
+import net.corda.core.crypto.SecureHash
 import net.corda.core.flows.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
+import java.lang.IllegalArgumentException
 
 
 //This flow is to be started by PartyA and either of two parties depending on the input state status.
@@ -25,8 +28,10 @@ object EndAgreementFlow{
      */
 
     class EndAgreementFlowInitiator(
-            val inputStateAndRef: StateAndRef<LegalAgreementState>,
-            override val progressTracker: ProgressTracker = tracker()) : FlowLogic<Unit>() {
+            val inputStateRef: StateRef,
+            override val progressTracker: ProgressTracker = tracker()): FlowLogic<SignedTransaction>() {
+
+        constructor(txhash: String, index: Int) : this(StateRef(SecureHash.parse(txhash), index))
 
         /**
          * The progress tracker checkpoints each stage of the flow and outputs the specified messages when each
@@ -53,23 +58,32 @@ object EndAgreementFlow{
 
         /** The flow logic is encapsulated within the call() method. */
         @Suspendable
-        override fun call() {
+        override fun call(): SignedTransaction {
             // We retrieve the notary identity from the network map.
             val notary = serviceHub.networkMapCache.notaryIdentities[0]
 
             progressTracker.currentStep = GENERATING_TRANSACTION
             // We create the transaction output state from the input
+
+            val inputStateAndRef = serviceHub.toStateAndRef<LegalAgreementState>(inputStateRef)
             val inputState = inputStateAndRef.state.data
             val outputState = inputState.copy(status = LegalAgreementState.Status.COMPLETED)
 
             // We create the transaction components based on the input state
-            val cmd = if (inputState.status == LegalAgreementState.Status.INTERMEDIATE) {
-                Command(DirectAgreementContract.Commands.Finalise(),
-                        listOf(inputState.partyA.owningKey, inputState.intermediary.owningKey))
-            } else {
-                Command(DirectAgreementContract.Commands.Finalise(),
-                        listOf(inputState.partyA.owningKey, inputState.partyB.owningKey))
+            val requiredSigners = when(inputState.status) {
+                LegalAgreementState.Status.INTERMEDIATE -> setOf(inputState.partyA, inputState.intermediary)
+                LegalAgreementState.Status.DIRECT -> setOf(inputState.partyA, inputState.partyB)
+                else -> throw IllegalArgumentException("Unexpected Status:" + inputState.status.name)
             }
+
+            val cmd = Command(
+                    DirectAgreementContract.Commands.Finalise(),
+                    requiredSigners.map { it.owningKey }.toList())
+            val otherPartySet = requiredSigners.minus(ourIdentity)
+            requireThat {
+                "There should be only one other party" using(otherPartySet.size == 1)
+            }
+            val otherParty = otherPartySet.single()
 
             val txBuilder = TransactionBuilder(notary = notary)
 
@@ -87,19 +101,6 @@ object EndAgreementFlow{
             val signedTx = serviceHub.signInitialTransaction(txBuilder)
 
             // Creating a session with the other party depending on the input state
-            val otherParty = when (inputState.status) {
-                LegalAgreementState.Status.INTERMEDIATE ->
-                    if (ourIdentity == inputState.partyA)
-                        inputState.partyB
-                    else
-                        inputState.partyA
-                LegalAgreementState.Status.DIRECT ->
-                    if (ourIdentity == inputState.partyA)
-                        inputState.intermediary
-                    else
-                        inputState.partyA
-                else -> throw java.lang.IllegalArgumentException("Unexpected party")
-            }
             progressTracker.currentStep = GATHERING_SIGS
             val otherPartySession = initiateFlow(otherParty)
 
@@ -111,7 +112,7 @@ object EndAgreementFlow{
 
             progressTracker.currentStep = FINALISING_TRANSACTION
             // We finalise the transaction with the notary
-            subFlow(FinalityFlow(
+            return subFlow(FinalityFlow(
                     fullySignedTx,
                     FINALISING_TRANSACTION.childProgressTracker()))
         }
@@ -123,36 +124,42 @@ object EndAgreementFlow{
      */
     @InitiatedBy(EndAgreementFlowInitiator::class)
     class EndAgreementFlowResponder(
-            val otherPartySession: FlowSession) : FlowLogic<Unit>() {
+            val otherPartySession: FlowSession) : FlowLogic<SignedTransaction>() {
 
         /**
          * The progress tracker checkpoints each stage of the flow and outputs the specified messages when each
          * checkpoint is reached in the code. See the 'progressTracker.currentStep' expressions within the call() function.
          */
         companion object {
+            object SIGNING_TRANSACTION: ProgressTracker.Step("Signing transaction with our private key.") {
+                override fun childProgressTracker(): ProgressTracker {
+                    return SignTransactionFlow.tracker()
+                }
+            }
             object CHECKING_VALIDITY: ProgressTracker.Step("Checking transaction validity.")
-            object SIGNING_TRANSACTION: ProgressTracker.Step("Signing transaction with our private key.")
 
-            fun tracker() = ProgressTracker(CHECKING_VALIDITY, SIGNING_TRANSACTION)
+            fun tracker() = ProgressTracker(
+                    SIGNING_TRANSACTION,
+                    CHECKING_VALIDITY)
         }
 
         override val progressTracker: ProgressTracker = tracker()
 
         @Suspendable
-        override fun call() {
-            val signTransactionFlow = object : SignTransactionFlow(otherPartySession, SignTransactionFlow.tracker()) {
+        override fun call(): SignedTransaction {
+            progressTracker.currentStep = SIGNING_TRANSACTION
+            val signTransactionFlow = object : SignTransactionFlow(otherPartySession, SIGNING_TRANSACTION.childProgressTracker()) {
                 override fun checkTransaction(stx: SignedTransaction) = requireThat {
-                    progressTracker.currentStep = CHECKING_VALIDITY
-                    // We need to have this infoplaced in the vault beforehand
+                    this@EndAgreementFlowResponder.progressTracker.currentStep = CHECKING_VALIDITY
+                    // We need to have this info placed in the vault beforehand
 //                    "This flow must have been approved" using (isOk)
 
                     // How to confirm that this builds on an input we agreed on and of which we are party
 
                     // Do we need to check that the output "matches" the input as if the tx was verified?
-                    progressTracker.currentStep = SIGNING_TRANSACTION
                 }
             }
-            subFlow(signTransactionFlow)
+            return subFlow(signTransactionFlow)
         }
     }
 }

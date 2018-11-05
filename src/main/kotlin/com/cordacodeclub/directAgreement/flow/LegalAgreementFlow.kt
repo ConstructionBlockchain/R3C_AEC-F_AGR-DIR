@@ -20,6 +20,12 @@ object LegalAgreementFlow {
     @StartableByRPC
     /**
      * This flow is to be started by the intermediary.
+     * For example:
+     * flow start com.cordacodeclub.directAgreement.flow.LegalAgreementFlow$LegalAgreementFlowInitiator\
+     *     agreementValue: "20 USD",\
+     *     partyA: "O=PartyA,L=London,C=GB",\
+     *     partyB: "O=PartyB,L=New York,C=US",\
+     *     oracle: "O=PartyC,L=Paris,C=FR"
      */
     class LegalAgreementFlowInitiator(
             val agreementValue: Amount<Currency>,
@@ -32,7 +38,7 @@ object LegalAgreementFlow {
          * checkpoint is reached in the code. See the 'progressTracker.currentStep' expressions within the call() function.
          */
         companion object {
-            object GENERATING_TRANSACTION : ProgressTracker.Step("Generating transaction based on new IOU.")
+            object GENERATING_TRANSACTION : ProgressTracker.Step("Generating transaction based on new info.")
             object VERIFYING_TRANSACTION : ProgressTracker.Step("Verifying contract constraints.")
             object SIGNING_TRANSACTION : ProgressTracker.Step("Signing transaction with our private key.")
             object GATHERING_SIGS : ProgressTracker.Step("Gathering the counterparty's signature.") {
