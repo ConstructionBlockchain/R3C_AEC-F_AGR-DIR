@@ -12,7 +12,7 @@ import java.security.PublicKey
 
 class DirectAgreementContract : Contract {
     companion object {
-        val ID = "com.cordacodeclub.directAgreement.DirectAgreementContract"
+        val ID = "com.cordacodeclub.directAgreement.contract.DirectAgreementContract"
     }
 
     fun verifyState(state: LegalAgreementState, signers: List<PublicKey>) {
