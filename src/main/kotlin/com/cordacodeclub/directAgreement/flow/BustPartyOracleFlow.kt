@@ -1,6 +1,7 @@
 package com.cordacodeclub.directAgreement.flow
 
 import co.paralleluniverse.fibers.Suspendable
+import com.cordacodeclub.directAgreement.oracle.BustDatabaseService
 import com.cordacodeclub.directAgreement.oracle.BustPartyOracle
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
@@ -10,6 +11,40 @@ import net.corda.core.utilities.ProgressTracker
 import net.corda.core.utilities.unwrap
 
 object BustPartyOracleFlow {
+
+    @InitiatingFlow
+    @StartableByRPC
+    /**
+     * Example:
+     * flow start com.cordacodeclub.directAgreement.flow.BustPartyOracleFlow$SetBustPartyInitiator\
+     *     bustParty: "O=PartyC,L=Paris,C=FR",\
+     *     isBust: true
+     */
+    class SetBustPartyInitiator(
+            val bustParty: Party,
+            val isBust: Boolean,
+            override val progressTracker: ProgressTracker = tracker()) : FlowLogic<Unit>() {
+
+        constructor(bustParty: Party, isBust: Boolean) : this(bustParty, isBust, tracker())
+
+        companion object {
+            object PREPARING : ProgressTracker.Step("Preparing database service.")
+            object UPDATING: ProgressTracker.Step("Updating database with value.")
+            object UPDATED: ProgressTracker.Step("Finished updating database with value.")
+
+            @JvmStatic
+            fun tracker() = ProgressTracker(PREPARING, UPDATING, UPDATED)
+        }
+
+        @Suspendable
+        override fun call() {
+            progressTracker.currentStep = PREPARING
+            val databaseService = serviceHub.cordaService(BustDatabaseService::class.java)
+            progressTracker.currentStep = UPDATING
+            databaseService.setIsBust(bustParty.name.toString(), isBust)
+            progressTracker.currentStep = UPDATED
+        }
+    }
 
     @InitiatingFlow
     @StartableByRPC
