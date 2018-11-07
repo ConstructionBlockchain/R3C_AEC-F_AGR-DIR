@@ -1,6 +1,8 @@
-package com.cordacodeclub.directAgreement
+package com.cordacodeclub.directAgreement.flow
 
 import co.paralleluniverse.fibers.Suspendable
+import com.cordacodeclub.directAgreement.oracle.BustDatabaseService
+import com.cordacodeclub.directAgreement.oracle.BustPartyOracle
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
@@ -12,13 +14,47 @@ object BustPartyOracleFlow {
 
     @InitiatingFlow
     @StartableByRPC
+    /**
+     * Example:
+     * flow start com.cordacodeclub.directAgreement.flow.BustPartyOracleFlow$SetBustPartyInitiator\
+     *     bustParty: "O=PartyC,L=Paris,C=FR",\
+     *     isBust: true
+     */
+    class SetBustPartyInitiator(
+            val bustParty: Party,
+            val isBust: Boolean,
+            override val progressTracker: ProgressTracker = tracker()) : FlowLogic<Unit>() {
+
+        constructor(bustParty: Party, isBust: Boolean) : this(bustParty, isBust, tracker())
+
+        companion object {
+            object PREPARING : ProgressTracker.Step("Preparing database service.")
+            object UPDATING: ProgressTracker.Step("Updating database with value.")
+            object UPDATED: ProgressTracker.Step("Finished updating database with value.")
+
+            @JvmStatic
+            fun tracker() = ProgressTracker(PREPARING, UPDATING, UPDATED)
+        }
+
+        @Suspendable
+        override fun call() {
+            progressTracker.currentStep = PREPARING
+            val databaseService = serviceHub.cordaService(BustDatabaseService::class.java)
+            progressTracker.currentStep = UPDATING
+            databaseService.setIsBust(bustParty.name.toString(), isBust)
+            progressTracker.currentStep = UPDATED
+        }
+    }
+
+    @InitiatingFlow
+    @StartableByRPC
     class QueryBustPartyInitiator(
             val oracle: Party,
             val party: Party,
-            override val progressTracker: ProgressTracker = QueryBustPartyInitiator.tracker()) : FlowLogic<Boolean>() {
+            override val progressTracker: ProgressTracker = tracker()) : FlowLogic<Boolean>() {
 
         companion object {
-            object RECEIVING_SENDING : ProgressTracker.Step("Sending and receiving partly infornation request to " +
+            object RECEIVING_SENDING : ProgressTracker.Step("Sending and receiving partly information request to " +
                     "BustPartyOracle.")
 
             @JvmStatic
@@ -34,8 +70,8 @@ object BustPartyOracleFlow {
 
     @InitiatedBy(QueryBustPartyInitiator::class)
     open class QueryBustPartyHandler(
-            val session: FlowSession,
-            override val progressTracker: ProgressTracker = QueryBustPartyHandler.tracker()) : FlowLogic<Unit>() {
+            val session: FlowSession) : FlowLogic<Unit>() {
+
         companion object {
             object RECEIVING : ProgressTracker.Step("Receiving query request.")
             object FETCHING : ProgressTracker.Step("Fetching bust status.")
@@ -44,6 +80,8 @@ object BustPartyOracleFlow {
             @JvmStatic
             fun tracker() = ProgressTracker(RECEIVING, FETCHING, SENDING)
         }
+
+        override val progressTracker: ProgressTracker = tracker()
 
         open fun bustPartyOracle() = serviceHub.cordaService(BustPartyOracle::class.java)
 
@@ -70,7 +108,7 @@ object BustPartyOracleFlow {
     class SignBustParty(
             val oracle: Party,
             val ftx: FilteredTransaction,
-            override val progressTracker: ProgressTracker = SignBustParty.tracker()) : FlowLogic<TransactionSignature>() {
+            override val progressTracker: ProgressTracker = tracker()) : FlowLogic<TransactionSignature>() {
 
         companion object {
             object RECEIVING_SENDING : ProgressTracker.Step("Sending and receiving partly signed transaction to " +
@@ -90,8 +128,9 @@ object BustPartyOracleFlow {
 
     @InitiatedBy(SignBustParty::class)
     open class SignHandler(
-            val session: FlowSession,
-            override val progressTracker: ProgressTracker = tracker()) : FlowLogic<Unit>() {
+            val session: FlowSession) : FlowLogic<Unit>() {
+
+        override val progressTracker: ProgressTracker = tracker()
 
         companion object {
             object RECEIVING : ProgressTracker.Step("Receiving sign request.")

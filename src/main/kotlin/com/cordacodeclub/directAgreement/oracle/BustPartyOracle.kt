@@ -1,5 +1,6 @@
-package com.cordacodeclub.directAgreement
+package com.cordacodeclub.directAgreement.oracle
 
+import com.cordacodeclub.directAgreement.contract.DirectAgreementContract
 import net.corda.core.contracts.Command
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.identity.Party
@@ -14,7 +15,8 @@ class BustPartyOracle(val services: ServiceHub) : SingletonSerializeAsToken() {
 
     // Eventually, this function should be real
     fun isItBust(party: Party): Boolean {
-        return true
+        val databaseService = services.cordaService(BustDatabaseService::class.java)
+        return databaseService.queryIsBust(party.toString())
     }
 
     fun sign(ftx: FilteredTransaction): TransactionSignature {

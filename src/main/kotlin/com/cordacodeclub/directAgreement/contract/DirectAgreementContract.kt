@@ -1,5 +1,6 @@
-package com.cordacodeclub.directAgreement
+package com.cordacodeclub.directAgreement.contract
 
+import com.cordacodeclub.directAgreement.state.LegalAgreementState
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
 import net.corda.core.contracts.requireSingleCommand
@@ -11,7 +12,7 @@ import java.security.PublicKey
 
 class DirectAgreementContract : Contract {
     companion object {
-        val ID = "com.cordacodeclub.directAgreement.DirectAgreementContract"
+        val ID = "com.cordacodeclub.directAgreement.contract.DirectAgreementContract"
     }
 
     fun verifyState(state: LegalAgreementState, signers: List<PublicKey>) {
@@ -70,7 +71,7 @@ class DirectAgreementContract : Contract {
                 val input = tx.inputsOfType<LegalAgreementState>().single()
                 requireThat {
                     "The input should have status INTERMEDIATE or DIRECT" using
-                            (input.status == LegalAgreementState.Status.INTERMEDIATE || input.status == LegalAgreementState.Status.DIRECT )
+                            (input.status == LegalAgreementState.Status.INTERMEDIATE || input.status == LegalAgreementState.Status.DIRECT)
                     "The output should have status COMPLETED" using (output.status == LegalAgreementState.Status.COMPLETED)
                     "The output value should be equal to the input value" using (output.value == input.value)
                     "The intermediary should be the same entity on both states" using (input.intermediary == output.intermediary)

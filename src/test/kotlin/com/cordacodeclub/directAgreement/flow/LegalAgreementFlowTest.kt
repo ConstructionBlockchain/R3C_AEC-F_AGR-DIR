@@ -1,5 +1,8 @@
+package com.cordacodeclub.directAgreement.flow
 
-import com.cordacodeclub.directAgreement.LegalAgreementFlow
+import com.cordacodeclub.directAgreement.flow.mock.BustPartySignHandlerMock
+import com.cordacodeclub.directAgreement.flow.mock.LegalAgreementFlowResponderMock
+import com.cordacodeclub.directAgreement.flow.mock.QueryBustPartyHandlerMock
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.TransactionVerificationException
 import net.corda.core.identity.CordaX500Name
@@ -21,16 +24,21 @@ class LegalAgreementFlowTest {
     private val testIntermediary = TestIdentity(CordaX500Name("TestIntermediary", "London", "GB"))
     private val testPartyA = TestIdentity(CordaX500Name("TestPartyA", "London", "GB"))
     private val testPartyB = TestIdentity(CordaX500Name("TestPartyB", "London", "GB"))
+    private val testOracle = TestIdentity(CordaX500Name("TestOracle", "London", "GB"))
 
     @Before
     fun setup() {
-        network = MockNetwork(listOf("com.example.contract"))
+        network = MockNetwork(listOf("com.cordacodeclub.directAgreement.contract"))
         testContractor = network.createPartyNode()
         testLender = network.createPartyNode()
         testSPV = network.createPartyNode()
 
         // For real nodes this happens automatically, but we have to manually register the flow for tests.
-        listOf(testContractor, testSPV).forEach { it.registerInitiatedFlow(LegalAgreementFlow.LegalAgreementFlowResponder::class.java) }
+        listOf(testContractor, testSPV, testLender).forEach {
+            it.registerInitiatedFlow(LegalAgreementFlowResponderMock::class.java)
+            it.registerInitiatedFlow(QueryBustPartyHandlerMock::class.java)
+            it.registerInitiatedFlow(BustPartySignHandlerMock::class.java)
+        }
         network.runNetwork()
     }
 
@@ -42,7 +50,8 @@ class LegalAgreementFlowTest {
     @Test
     fun `flow rejects invalid Agreements`() {
         val flow = LegalAgreementFlow.LegalAgreementFlowInitiator(
-                Amount(10, Currency.getInstance("GBP")), testPartyA.party, testIntermediary.party)
+                Amount(10, Currency.getInstance("GBP")),
+                testPartyA.party, testIntermediary.party, testOracle.party)
         val future = testSPV.startFlow(flow)
         network.runNetwork()
 
