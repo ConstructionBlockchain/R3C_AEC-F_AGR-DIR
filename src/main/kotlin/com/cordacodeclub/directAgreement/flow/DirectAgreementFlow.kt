@@ -21,6 +21,10 @@ object DirectAgreementFlow {
     /**
      * This flow can be started by partyA or partyB.
      * And it has to be signed by partyA and partyB.
+     * Example:
+     * flow start com.cordacodeclub.directAgreement.flow.DirectAgreementFlow$DirectAgreementFlowInitiator\
+     *     txhash: "C4D1AE65784CA5D7BDB56E7C6CFF2F210FE0A2F7D910120E3816BC20739F8CCE",\
+     *     index: 0
      */
     class DirectAgreementFlowInitiator(
             val inputStateRef: StateRef,

@@ -25,6 +25,10 @@ object EndAgreementFlow{
     /**
      * This flow can be started by partyA or PartyB
      * And it has to be signed by partyA or PartyB]
+     * Example:
+     * flow start com.cordacodeclub.directAgreement.flow.EndAgreementFlow$EndAgreementFlowInitiator\
+     *     txhash: "2A7C7A70B7EBF9D4915BD83828C391586F6582E5E2448214ECA1483ACDEF56E7",\
+     *     index: 0
      */
 
     class EndAgreementFlowInitiator(
