@@ -2,9 +2,9 @@ package com.cordacodeclub.directAgreement.flow
 
 import co.paralleluniverse.fibers.Suspendable
 import com.cordacodeclub.directAgreement.contract.DirectAgreementContract
+import com.cordacodeclub.directAgreement.oracle.BustPartyOracle.Companion.filterForBustPartyOracle
 import com.cordacodeclub.directAgreement.state.LegalAgreementState
 import net.corda.core.contracts.Command
-import net.corda.core.contracts.StateAndRef
 import net.corda.core.contracts.StateRef
 import net.corda.core.contracts.requireThat
 import net.corda.core.crypto.SecureHash
@@ -12,7 +12,6 @@ import net.corda.core.flows.*
 import net.corda.core.transactions.SignedTransaction
 import net.corda.core.transactions.TransactionBuilder
 import net.corda.core.utilities.ProgressTracker
-import java.util.function.Predicate
 
 object DirectAgreementFlow {
 
@@ -113,21 +112,10 @@ object DirectAgreementFlow {
             // Signing the transaction
             val signedTx1 = serviceHub.signInitialTransaction(txBuilder)
 
-            // Asking the oracle to sign the transaction
-            // For privacy reasons, we only want to expose to the oracle any commands of type `GoToDirect`
-            // that require its signature.
-            val ftx = signedTx1.buildFilteredTransaction(Predicate {
-                when (it) {
-                    is Command<*> -> inputState.oracle.owningKey in it.signers &&
-                            it.value is DirectAgreementContract.Commands.GoToDirect
-                    else -> false
-                }
-            })
-
             progressTracker.currentStep = GATHERING_ORACLE_SIG
             val oracleSignature = subFlow(BustPartyOracleFlow.SignBustParty(
                     inputState.oracle,
-                    ftx,
+                    signedTx1.filterForBustPartyOracle(inputState.oracle.owningKey),
                     GATHERING_ORACLE_SIG.childProgressTracker()))
             val signedTx = signedTx1.withAdditionalSignature(oracleSignature)
 
