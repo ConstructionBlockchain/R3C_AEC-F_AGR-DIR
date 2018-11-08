@@ -1,7 +1,7 @@
 package com.cordacodeclub.directAgreement.api
 
-
 import com.cordacodeclub.directAgreement.flow.LegalAgreementFlow.LegalAgreementFlowInitiator
+import com.cordacodeclub.directAgreement.schema.LegalAgreementSchemaV1
 import com.cordacodeclub.directAgreement.state.LegalAgreementState
 import net.corda.core.contracts.Amount
 import net.corda.core.identity.CordaX500Name
@@ -12,7 +12,6 @@ import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.builder
-import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import org.slf4j.Logger
 import java.util.*
@@ -21,7 +20,6 @@ import javax.ws.rs.core.MediaType
 import javax.ws.rs.core.Response
 import javax.ws.rs.core.Response.Status.BAD_REQUEST
 import javax.ws.rs.core.Response.Status.CREATED
-
 val SERVICE_NAMES = listOf("oracle", "Network Map Service")
 
 @Path("agreement")
@@ -98,7 +96,7 @@ class AgreementApi(private val rpcOps: CordaRPCOps) {
         return Response.status(BAD_REQUEST).entity("Party named $oracle cannot be found.\n").build()
 
         return try {
-            val signedTx = rpcOps.startTrackedFlow(::).returnValue.getOrThrow()
+            val signedTx = rpcOps.startTrackedFlow().returnValue.getOrThrow()
             Response.status(CREATED).entity("Transaction id ${signedTx.id} committed to ledger.\n").build()
 
         } catch (ex: Throwable) {
@@ -110,15 +108,14 @@ class AgreementApi(private val rpcOps: CordaRPCOps) {
     /**
      * Displays all LegalAgreement states that are created by Party.
      */
-    //TODO LegalAgreementSchema
-    val LegalAgreementSchema
     @GET
     @Path("my-legalAgreements")
     @Produces(MediaType.APPLICATION_JSON)
     fun myLegalAgreements(): Response {
         val generalCriteria = QueryCriteria.VaultQueryCriteria(Vault.StateStatus.ALL)
         val results = builder {
-            var partyType = LegalAgreementSchema.PersistentLegalAgreement::intermediate.equal(rpcOps.nodeInfo().legalIdentities.first().name.toString())
+            var partyType = LegalAgreementSchemaV1.PersistentLegalAgreement::intermediary
+                    .equal(rpcOps.nodeInfo().legalIdentities.first().name.toString())
             val customCriteria = QueryCriteria.VaultCustomQueryCriteria(partyType)
             val criteria = generalCriteria.and(customCriteria)
             val results = rpcOps.vaultQueryBy<LegalAgreementState>(criteria).states

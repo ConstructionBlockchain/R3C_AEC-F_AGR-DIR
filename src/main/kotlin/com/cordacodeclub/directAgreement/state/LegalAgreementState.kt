@@ -1,10 +1,14 @@
 package com.cordacodeclub.directAgreement.state
 
+import com.cordacodeclub.directAgreement.schema.LegalAgreementSchemaV1
 import net.corda.core.contracts.Amount
 import net.corda.core.contracts.ContractState
 import net.corda.core.contracts.requireThat
 import net.corda.core.identity.AbstractParty
 import net.corda.core.identity.Party
+import net.corda.core.schemas.MappedSchema
+import net.corda.core.schemas.PersistentState
+import net.corda.core.schemas.QueryableState
 import net.corda.core.serialization.CordaSerializable
 import java.util.*
 
@@ -14,7 +18,7 @@ data class LegalAgreementState(
         val partyB: Party,
         val oracle: Party,
         val status: Status,
-        val value: Amount<Currency>) : ContractState {
+        val value: Amount<Currency>) : ContractState, QueryableState {
 
     @CordaSerializable
     enum class Status { INTERMEDIATE, DIRECT, COMPLETED }
@@ -29,4 +33,20 @@ data class LegalAgreementState(
     }
 
     override val participants: List<AbstractParty> = listOf(partyA, partyB)
+
+    override fun generateMappedObject(schema: MappedSchema): PersistentState {
+        return when (schema) {
+            is LegalAgreementSchemaV1 -> LegalAgreementSchemaV1.PersistentLegalAgreement(
+                    this.intermediary.name.toString(),
+                    this.partyA.name.toString(),
+                    this.partyB.name.toString(),
+                    this.oracle.name.toString(),
+                    this.status.toString(),
+                    this.value
+            )
+            else -> throw IllegalArgumentException("Unrecognised schema $schema")
+        }
+    }
+
+    override fun supportedSchemas(): Iterable<MappedSchema> = listOf(LegalAgreementSchemaV1)
 }
