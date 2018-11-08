@@ -31,7 +31,8 @@ object DirectAgreementFlow {
             override val progressTracker: ProgressTracker = tracker()) : FlowLogic<SignedTransaction>() {
 
         // Useful for the shell
-        constructor(txhash: String, index: Int) : this(StateRef(SecureHash.parse(txhash), index))
+        constructor(txSecurehash: SecureHash, index: Int) : this(StateRef(txSecurehash, index))
+        constructor(txhash: String, index: Int) : this(SecureHash.parse(txhash), index)
 
         /**
          * The progress tracker checkpoints each stage of the flow and outputs the specified messages when each
@@ -67,7 +68,7 @@ object DirectAgreementFlow {
         /** The flow logic is encapsulated within the call() method. */
         @Suspendable
         override fun call(): SignedTransaction {
-            // We retrieve the first notary identity from the network map.
+            // We retrieve the notary from the input.
             val notary = serviceHub.networkMapCache.notaryIdentities[0]
 
             progressTracker.currentStep = QUERYING_ORACLE

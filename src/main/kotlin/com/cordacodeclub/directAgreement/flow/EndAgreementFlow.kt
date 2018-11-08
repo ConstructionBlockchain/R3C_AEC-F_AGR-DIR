@@ -36,7 +36,8 @@ object EndAgreementFlow{
             override val progressTracker: ProgressTracker = tracker()): FlowLogic<SignedTransaction>() {
 
         // Useful for the shell
-        constructor(txhash: String, index: Int) : this(StateRef(SecureHash.parse(txhash), index))
+        constructor(txSecurehash: SecureHash, index: Int) : this(StateRef(txSecurehash, index))
+        constructor(txhash: String, index: Int) : this(SecureHash.parse(txhash), index)
 
         /**
          * The progress tracker checkpoints each stage of the flow and outputs the specified messages when each
