@@ -1,5 +1,6 @@
 package com.cordacodeclub.directAgreement.contract
 
+import com.cordacodeclub.directAgreement.oracle.IsBustCommand
 import com.cordacodeclub.directAgreement.state.LegalAgreementState
 import net.corda.core.contracts.CommandData
 import net.corda.core.contracts.Contract
@@ -49,7 +50,7 @@ class DirectAgreementContract : Contract {
                 val input = tx.inputsOfType<LegalAgreementState>().single()
                 "The input should have status INTERMEDIATE" using (input.status == LegalAgreementState.Status.INTERMEDIATE)
                 val commandValue = command.value as Commands.GoToDirect
-                "The intermediary needs to be mentioned in the command" using (input.intermediary == commandValue.party)
+                "The intermediary needs to be mentioned in the command" using (input.intermediary == commandValue.bustParty)
                 "The intermediate needs to be bust" using (commandValue.isBust)
                 // Can we assume that the requirements in `Create` are fulfilled?
                 "The output should have status DIRECT" using (output.status == LegalAgreementState.Status.DIRECT)
@@ -99,8 +100,9 @@ class DirectAgreementContract : Contract {
 
     interface Commands : CommandData {
         class Create : Commands
-        class GoToDirect(val party: Party, val isBust: Boolean) : Commands
+        // Be careful that the name of the parameter has to be `bustParty` otherwise you get a
+        // java.io.NotSerializableException: Constructor parameter - "party" -  doesn't refer to a property of "class .
+        class GoToDirect(bustParty: Party, isBust: Boolean) : IsBustCommand(bustParty, isBust), Commands
         class Finalise : Commands
-        // Will want an oracle on Intermediary being bust
     }
 }
