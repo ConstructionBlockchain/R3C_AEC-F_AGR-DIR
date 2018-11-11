@@ -1,8 +1,10 @@
 package com.cordacodeclub.directAgreement.oracle
 
 import com.cordacodeclub.directAgreement.db.DatabaseService
+import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService
+import java.sql.ResultSet
 import java.sql.SQLException
 
 /**
@@ -73,6 +75,22 @@ class BustDatabaseService(services: ServiceHub) : DatabaseService(services) {
         }
         log.info("Party $party read from $tableName table.")
         return isBust
+    }
+
+    /**
+     * Retrieves the table of bust parties.
+     */
+    fun queryBustParties(): List<BustParty> {
+        val query = "select party, isBust from $tableName"
+
+        val results = executeQuery(query, emptyMap()) {
+            BustParty(
+                it.getString("party"),
+                it.getBoolean("isBust"))
+        }
+
+        log.info("The $tableName table.")
+        return results
     }
 
     /**
