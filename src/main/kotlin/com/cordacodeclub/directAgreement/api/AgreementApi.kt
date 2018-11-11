@@ -113,7 +113,9 @@ class AgreementApi(private val rpcOps: CordaRPCOps) {
             logger.error("Failed getting Currency $currencyCode", e)
             return Response.status(INTERNAL_SERVER_ERROR).entity("Error getting $currencyCode.\n").build()
         }
-        val value = Amount(quantity, currency)
+        var adjusted = quantity!!
+        (1..currency.defaultFractionDigits).forEach { adjusted *= 10 }
+        val value = Amount(adjusted, currency)
 
         return try {
             val signedTx = rpcOps.startTrackedFlow(::LegalAgreementFlowInitiator, value, partyA, partyB, oracle)
