@@ -10,7 +10,7 @@ import org.slf4j.Logger
 
 /**
  *  Demonstration of using the CordaRPCClient to connect to a Corda Node and
- *  steam some State data from the node.
+ *  stream some State data from the node.
  **/
 
 fun main(args: Array<String>) {
@@ -24,7 +24,7 @@ private class LegalAgreementClientRPC {
     }
 
     fun main(args: Array<String>) {
-        require(args.size == 1) { "Usage: ExampleClientRPC <node address>" }
+        require(args.size == 1) { "Usage: LegalAgreementClientRPC <node address>" }
         val nodeAddress = NetworkHostAndPort.parse(args[0])
         val client = CordaRPCClient(nodeAddress)
 
