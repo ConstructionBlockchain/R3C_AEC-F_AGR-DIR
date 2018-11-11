@@ -21,10 +21,12 @@ flow start com.cordacodeclub.directAgreement.flow.LegalAgreementFlow$LegalAgreem
 With API:
 
 ```bash
-curl -X PUT 'http://localhost:10009/api/agreement/create-legal-agreement?quantity=20&currency=USD&partyA=O=Contractor,L=London,C=GB&partyB=O=Lender,L=New%20York,C=US&oracle=O=Oracle,L=Hamburg,C=DE'
+curl -X PUT 'http://localhost:10015/api/agreement/create-legal-agreement?quantity=20&currency=USD&partyA=O=Contractor,L=London,C=GB&partyB=O=Lender,L=New%20York,C=US&oracle=O=Oracle,L=Hamburg,C=DE'
 ```
 
 ### Get status
+
+In node shell:
 
 ```yaml
 run vaultQuery contractStateType: com.cordacodeclub.directAgreement.state.LegalAgreementState
@@ -56,27 +58,29 @@ If `runnodes` gives problems:
 
 ```bash
 # Notary
-bash -c 'cd "/Users/xavier/DAPPS/Corda/R3C_AEC-F_AGR-DIR/build/nodes/Notary" ; "/Library/Java/JavaVirtualMachines/jdk1.8.0_191.jdk/Contents/Home/jre/bin/j "-Dname=Notary-corda.jar" "-Dcapsule.jvm.args=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -javaagent:drivers/jolokia-jvm-1.3.7-agent.jar=port=7005,logHandlerClass=net.corda.node.JolokiaSlf4Adapter" "-jar" "corda.jar" && exit'
+bash -c 'cd "/Users/xavier/DAPPS/Corda/R3C_AEC-F_AGR-DIR/build/nodes/Notary" ; "/Library/Java/JavaVirtualMachines/jdk1.8.0_191.jdk/Contents/Home/jre/bin/java" "-Dname=Notary-corda.jar" "-Dcapsule.jvm.args=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005 -javaagent:drivers/jolokia-jvm-1.3.7-agent.jar=port=7005,logHandlerClass=net.corda.node.JolokiaSlf4Adapter" "-jar" "corda.jar" && exit'
 
 # Contractor
-bash -c 'cd "/Users/xavier/DAPPS/Corda/R3C_AEC-F_AGR-DIR/build/nodes/Contractor" ; "/Library/Java/JavaVirtualMachines/jdk1.8.0_191.jdk/Contents/Home/jre/bin/java" "-Dname=Contractor-corda.jar" "-Dcapsule.jvm.args=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5007 -javaagent:drivers/jolokia-jvm-1.3.7-agent.jar=port=7007,logHandlerClass=net.corda.node.JolokiaSlf4Adapter" "-jar" "corda.jar" && exit'
+bash -c 'cd "/Users/xavier/DAPPS/Corda/R3C_AEC-F_AGR-DIR/build/nodes/Contractor" ; "/Library/Java/JavaVirtualMachines/jdk1.8.0_191.jdk/Contents/Home/jre/bin/java" "-Dname=Contractor-corda.jar" "-Dcapsule.jvm.args=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5006 -javaagent:drivers/jolokia-jvm-1.3.7-agent.jar=port=7006,logHandlerClass=net.corda.node.JolokiaSlf4Adapter" "-jar" "corda.jar" && exit'
 
 # Contractor web server
-bash -c 'cd "/Users/xavier/DAPPS/Corda/R3C_AEC-F_AGR-DIR/build/nodes/Contractor" ; "/Library/Java/JavaVirtualMachines/jdk1.8.0_191.jdk/Contents/Home/jre/bin/java" "-Dname=Contractor-corda-webserver.jar" "-Dcapsule.jvm.args=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5009 -javaagent:drivers/jolokia-jvm-1.3.7-agent.jar=port=7009,logHandlerClass=net.corda.webserver.JolokiaSlf4Adapter" "-jar" "corda-webserver.jar" && exit'
+bash -c 'cd "/Users/xavier/DAPPS/Corda/R3C_AEC-F_AGR-DIR/build/nodes/Contractor" ; "/Library/Java/JavaVirtualMachines/jdk1.8.0_191.jdk/Contents/Home/jre/bin/java" "-Dname=Contractor-corda-webserver.jar" "-Dcapsule.jvm.args=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5007 -javaagent:drivers/jolokia-jvm-1.3.7-agent.jar=port=7007,logHandlerClass=net.corda.webserver.JolokiaSlf4Adapter" "-jar" "corda-webserver.jar" && exit'
 
 # Lender
-bash -c 'cd "/Users/xavier/DAPPS/Corda/R3C_AEC-F_AGR-DIR/build/nodes/Lender" ; "/Library/Java/JavaVirtualMachines/jdk1.8.0_191.jdk/Contents/Home/jre/bin/java" "-Dname=Lender-corda.jar" "-Dcapsule.jvm.args=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5006 -javaagent:drivers/jolokia-jvm-1.3.7-agent.jar=port=7006,logHandlerClass=net.corda.node.JolokiaSlf4Adapter" "-jar" "corda.jar" && exit'
+bash -c 'cd "/Users/xavier/DAPPS/Corda/R3C_AEC-F_AGR-DIR/build/nodes/Lender" ; "/Library/Java/JavaVirtualMachines/jdk1.8.0_191.jdk/Contents/Home/jre/bin/java" "-Dname=Lender-corda.jar" "-Dcapsule.jvm.args=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5008 -javaagent:drivers/jolokia-jvm-1.3.7-agent.jar=port=7008,logHandlerClass=net.corda.node.JolokiaSlf4Adapter" "-jar" "corda.jar" && exit'
 
 # Lender web server
-bash -c 'cd "/Users/xavier/DAPPS/Corda/R3C_AEC-F_AGR-DIR/build/nodes/Lender" ; "/Library/Java/JavaVirtualMachines/jdk1.8.0_191.jdk/Contents/Home/jre/bin/java" "-Dname=Lender-corda-webserver.jar" "-Dcapsule.jvm.args=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5010 -javaagent:drivers/jolokia-jvm-1.3.7-agent.jar=port=7010,logHandlerClass=net.corda.webserver.JolokiaSlf4Adapter" "-jar" "corda-webserver.jar" && exit'
+bash -c 'cd "/Users/xavier/DAPPS/Corda/R3C_AEC-F_AGR-DIR/build/nodes/Lender" ; "/Library/Java/JavaVirtualMachines/jdk1.8.0_191.jdk/Contents/Home/jre/bin/java" "-Dname=Lender-corda-webserver.jar" "-Dcapsule.jvm.args=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5009 -javaagent:drivers/jolokia-jvm-1.3.7-agent.jar=port=7009,logHandlerClass=net.corda.webserver.JolokiaSlf4Adapter" "-jar" "corda-webserver.jar" && exit'
 
 # Intermediary
-bash -c 'cd "/Users/xavier/DAPPS/Corda/R3C_AEC-F_AGR-DIR/build/nodes/Intermediary" ; "/Library/Java/JavaVirtualMachines/jdk1.8.0_191.jdk/Contents/Home/jre/bin/java" "-Dname=Intermediary-corda.jar" "-Dcapsule.jvm.args=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5008 -javaagent:drivers/jolokia-jvm-1.3.7-agent.jar=port=7008,logHandlerClass=net.corda.node.JolokiaSlf4Adapter" "-jar" "corda.jar" && exit'
+bash -c 'cd "/Users/xavier/DAPPS/Corda/R3C_AEC-F_AGR-DIR/build/nodes/Intermediary" ; "/Library/Java/JavaVirtualMachines/jdk1.8.0_191.jdk/Contents/Home/jre/bin/java" "-Dname=Intermediary-corda.jar" "-Dcapsule.jvm.args=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5010 -javaagent:drivers/jolokia-jvm-1.3.7-agent.jar=port=7010,logHandlerClass=net.corda.node.JolokiaSlf4Adapter" "-jar" "corda.jar" && exit'
 
 # Intermediary web server
 bash -c 'cd "/Users/xavier/DAPPS/Corda/R3C_AEC-F_AGR-DIR/build/nodes/Intermediary" ; "/Library/Java/JavaVirtualMachines/jdk1.8.0_191.jdk/Contents/Home/jre/bin/java" "-Dname=Intermediary-corda-webserver.jar" "-Dcapsule.jvm.args=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5011 -javaagent:drivers/jolokia-jvm-1.3.7-agent.jar=port=7011,logHandlerClass=net.corda.webserver.JolokiaSlf4Adapter" "-jar" "corda-webserver.jar" && exit'
 
-
 # Oracle
-bash -c 'cd "/Users/xavier/DAPPS/Corda/R3C_AEC-F_AGR-DIR/build/nodes/Oracle" ; "/Library/Java/JavaVirtualMachines/jdk1.8.0_191.jdk/Contents/Home/jre/bin/java" "-Dname=Oracle-corda.jar" "-Dcapsule.jvm.args=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5010 -javaagent:drivers/jolokia-jvm-1.3.7-agent.jar=port=7010,logHandlerClass=net.corda.node.JolokiaSlf4Adapter" "-jar" "corda.jar" && exit'
+bash -c 'cd "/Users/xavier/DAPPS/Corda/R3C_AEC-F_AGR-DIR/build/nodes/Oracle" ; "/Library/Java/JavaVirtualMachines/jdk1.8.0_191.jdk/Contents/Home/jre/bin/java" "-Dname=Oracle-corda.jar" "-Dcapsule.jvm.args=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5012 -javaagent:drivers/jolokia-jvm-1.3.7-agent.jar=port=7012,logHandlerClass=net.corda.node.JolokiaSlf4Adapter" "-jar" "corda.jar" && exit'
+
+# Oracle web server
+bash -c 'cd "/Users/xavier/DAPPS/Corda/R3C_AEC-F_AGR-DIR/build/nodes/Oracle" ; "/Library/Java/JavaVirtualMachines/jdk1.8.0_191.jdk/Contents/Home/jre/bin/java" "-Dname=Oracle-corda-webserver.jar" "-Dcapsule.jvm.args=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5013 -javaagent:drivers/jolokia-jvm-1.3.7-agent.jar=port=7013,logHandlerClass=net.corda.webserver.JolokiaSlf4Adapter" "-jar" "corda-webserver.jar" && exit'
 ```
