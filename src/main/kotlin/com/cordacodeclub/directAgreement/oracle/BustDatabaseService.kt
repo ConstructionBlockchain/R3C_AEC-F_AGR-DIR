@@ -65,7 +65,7 @@ class BustDatabaseService(services: ServiceHub) : DatabaseService(services) {
 
         val params = mapOf(1 to party)
 
-        val results = executeQuery(query, params, { it -> it.getBoolean("isBust") })
+        val results = executeQuery(query, params) { it.getBoolean("isBust") }
 
         val isBust = when (results.isEmpty()) {
             true -> false
@@ -73,6 +73,22 @@ class BustDatabaseService(services: ServiceHub) : DatabaseService(services) {
         }
         log.info("Party $party read from $tableName table.")
         return isBust
+    }
+
+    /**
+     * Retrieves the table of bust parties.
+     */
+    fun queryBustParties(): List<BustParty> {
+        val query = "select party, isBust from $tableName"
+
+        val results = executeQuery(query, emptyMap()) {
+            BustParty(
+                it.getString("party"),
+                it.getBoolean("isBust"))
+        }
+
+        log.info("Selected ${results.size} parties from $tableName table.")
+        return results
     }
 
     /**

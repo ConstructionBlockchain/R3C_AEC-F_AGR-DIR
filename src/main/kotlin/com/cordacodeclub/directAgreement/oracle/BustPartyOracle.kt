@@ -27,20 +27,25 @@ class BustPartyOracle(val services: ServiceHub) : SingletonSerializeAsToken() {
                 this.buildFilteredTransaction(filterPredicate(oracle))
     }
 
+    /** Returns true if the component is a IsBustCommand command that:
+     *  - Has the oracle listed as a signer
+     *  - States the proper state of a Party
+     */
     fun isItBust(party: Party): Boolean {
         val databaseService = services.cordaService(BustDatabaseService::class.java)
         return databaseService.queryIsBust(party.toString())
     }
 
-    /** Returns true if the component is a IsBustCommand command that:
-     *  - Has the oracle listed as a signer
-     *  - States the proper state of a Party
-     */
     fun FilteredTransaction.agreesWithBustPartyOracle(): Boolean = this.checkWithFun {
         it is Command<*>
                 && myKey in it.signers
                 && it.value is IsBustCommand
                 && isItBust((it.value as IsBustCommand).bustParty) == (it.value as IsBustCommand).isBust
+    }
+
+    fun getAllBustParties(): List<BustParty> {
+        val databaseService = services.cordaService(BustDatabaseService::class.java)
+        return databaseService.queryBustParties();
     }
 
     fun sign(ftx: FilteredTransaction): TransactionSignature {

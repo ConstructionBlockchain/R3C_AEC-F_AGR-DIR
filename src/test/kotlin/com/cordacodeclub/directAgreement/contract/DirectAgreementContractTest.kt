@@ -16,8 +16,8 @@ import java.util.*
 class DirectAgreementContractTest {
     private val ledgerServices = MockServices()
     private val testIntermediary = TestIdentity(CordaX500Name("TestIntermediary", "London", "GB"))
-    private val testPartyA = TestIdentity(CordaX500Name("TestPartyA", "London", "GB"))
-    private val testPartyB = TestIdentity(CordaX500Name("TestPartyB", "London", "GB"))
+    private val testPartyA = TestIdentity(CordaX500Name("TestContractor", "London", "GB"))
+    private val testPartyB = TestIdentity(CordaX500Name("TestLender", "London", "GB"))
     private val testOracle = TestIdentity(CordaX500Name("TestOracle", "London", "GB"))
     private val intermediaryAgreement = LegalAgreementState(
             intermediary = testIntermediary.party, partyA = testPartyA.party,
