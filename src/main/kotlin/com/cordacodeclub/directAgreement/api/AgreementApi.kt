@@ -1,9 +1,11 @@
 package com.cordacodeclub.directAgreement.api
 
+import com.cordacodeclub.directAgreement.flow.BustPartyOracleFlow
 import com.cordacodeclub.directAgreement.flow.BustPartyOracleFlow.SetBustPartyInitiator
 import com.cordacodeclub.directAgreement.flow.DirectAgreementFlow.DirectAgreementFlowInitiator
 import com.cordacodeclub.directAgreement.flow.EndAgreementFlow.EndAgreementFlowInitiator
 import com.cordacodeclub.directAgreement.flow.LegalAgreementFlow.LegalAgreementFlowInitiator
+import com.cordacodeclub.directAgreement.oracle.BustParty
 import com.cordacodeclub.directAgreement.schema.LegalAgreementSchemaV1
 import com.cordacodeclub.directAgreement.state.LegalAgreementState
 import net.corda.core.contracts.Amount
@@ -118,6 +120,25 @@ class AgreementApi(private val rpcOps: CordaRPCOps) {
                     .returnValue.getOrThrow()
             Response.status(CREATED).entity("Transaction id ${signedTx.id} committed to ledger.\n").build()
 
+        } catch (ex: Throwable) {
+            logger.error(ex.message, ex)
+            Response.status(BAD_REQUEST).entity(ex.message!!).build()
+        }
+    }
+
+    @GET
+    @Path("get-bust-parties")
+    fun getBustParties(@QueryParam("oracle") oracleName: CordaX500Name?): Response {
+        if (oracleName == null) {
+            return Response.status(BAD_REQUEST).entity("Query parameter 'oracle' missing or has wrong format.\n").build()
+        }
+        val oracle = rpcOps.wellKnownPartyFromX500Name(oracleName)
+                ?: return Response.status(BAD_REQUEST).entity("Party named $oracleName cannot be found.\n").build()
+
+        return try {
+            val bustParties: List<BustParty> = rpcOps.startTrackedFlow(BustPartyOracleFlow::QueryBustPartyAllInitiator, oracle).returnValue.getOrThrow()
+            logger.info(bustParties.map { it.toString() }.joinToString(separator = ", "))
+            Response.ok(bustParties).build()
         } catch (ex: Throwable) {
             logger.error(ex.message, ex)
             Response.status(BAD_REQUEST).entity(ex.message!!).build()
