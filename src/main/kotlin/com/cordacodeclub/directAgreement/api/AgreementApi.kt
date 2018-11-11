@@ -1,10 +1,12 @@
 package com.cordacodeclub.directAgreement.api
 
+import com.cordacodeclub.directAgreement.flow.BustPartyOracleFlow.SetBustPartyInitiator
 import com.cordacodeclub.directAgreement.flow.LegalAgreementFlow.LegalAgreementFlowInitiator
 import com.cordacodeclub.directAgreement.schema.LegalAgreementSchemaV1
 import com.cordacodeclub.directAgreement.state.LegalAgreementState
 import net.corda.core.contracts.Amount
 import net.corda.core.identity.CordaX500Name
+import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.messaging.vaultQueryBy
@@ -114,6 +116,39 @@ class AgreementApi(private val rpcOps: CordaRPCOps) {
             val signedTx = rpcOps.startTrackedFlow(::LegalAgreementFlowInitiator, value, partyA, partyB, oracle)
                     .returnValue.getOrThrow()
             Response.status(CREATED).entity("Transaction id ${signedTx.id} committed to ledger.\n").build()
+
+        } catch (ex: Throwable) {
+            logger.error(ex.message, ex)
+            Response.status(BAD_REQUEST).entity(ex.message!!).build()
+        }
+    }
+
+    /**
+     * Initiates a flow to set a party as Bust.
+     *
+     * This end-point takes a party name and boolean as part of the path. If the serving node can't find the party
+     * in its network map cache, it will return an HTTP bad request.
+     *
+     * The flow is invoked asynchronously. It returns a future when the flow's call() method returns.
+     */
+    @PUT
+    @Path("set-party-bust")
+    fun setPartyBust(@QueryParam("party") bustParty: CordaX500Name?,
+                     @QueryParam("isBust") isBust: Boolean?): Response {
+        if (bustParty == null) {
+            return Response.status(BAD_REQUEST).entity("Query parameter 'party' missing or has wrong format.\n").build()
+        }
+
+        if (isBust == null) {
+            return Response.status(BAD_REQUEST).entity("Query parameter 'isBust' missing or has wrong format.\n").build()
+        }
+
+        val party = rpcOps.wellKnownPartyFromX500Name(bustParty)
+                ?: return Response.status(BAD_REQUEST).entity("Party named $bustParty cannot be found.\n").build()
+
+        return try {
+            rpcOps.startTrackedFlow(::SetBustPartyInitiator, party, isBust).returnValue.getOrThrow()
+            Response.status(CREATED).entity("The party $party is bust now\n").build()
 
         } catch (ex: Throwable) {
             logger.error(ex.message, ex)

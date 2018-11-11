@@ -37,6 +37,12 @@ run vaultQuery contractStateType: com.cordacodeclub.directAgreement.state.LegalA
 flow start com.cordacodeclub.directAgreement.flow.BustPartyOracleFlow$SetBustPartyInitiator bustParty: "O=Intermediary,L=Paris,C=FR", isBust: true
 ```
 
+With API:
+
+```bash
+curl -X PUT 'http://localhost:10018/api/agreement/set-party-bust?party=O=Intermediary,L=Paris,C=FR&isBust=true'
+```
+
 ### Go to direct agreement
 
 ```yaml
