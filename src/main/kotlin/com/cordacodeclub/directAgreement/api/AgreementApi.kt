@@ -149,7 +149,11 @@ class AgreementApi(private val rpcOps: CordaRPCOps) {
 
         return try {
             rpcOps.startTrackedFlow(::SetBustPartyInitiator, party, isBust).returnValue.getOrThrow()
-            Response.status(CREATED).entity("The party $party is bust now\n").build()
+            val not = when(isBust) {
+                false -> "not"
+                else -> ""
+            }
+            Response.status(CREATED).entity("The party $party is $not bust now\n").build()
 
         } catch (ex: Throwable) {
             logger.error(ex.message, ex)
