@@ -221,18 +221,17 @@ COMING WEEKS WE'LL WRITE A TUTORIAL ON HOW BEST TO DO THIS.
                 <div class="panel-primary">
                     <div class="panel-heading">
                         <h4 class="panel-title">
-                            My Agreements:
+                            Bust Parties From Oracle
                         </h4>
                     </div>
                 </div>
                 <div>
-                    <div ng-repeat="agreement in demoApp.myAgreements" class="panel panel-default">
+                    <div ng-show="!demoApp.bustParties.length" class="panel-body">There is no bust party.</div>
+                    <div ng-repeat="bustParty in demoApp.bustParties" class="panel panel-default">
                         <div class="panel-body">
                             <ul>
-                                <li>Contractor: {{agreement.contractor}}</li>
-                                <li>Lender: {{agreement.lender}}</li>
-                                <li>Oracle: {{agreement.oracle}}</li>
-                                <li>Value: {{agreement.value}}</li>
+                                <li>Party: {{bustParty.party}}</li>
+                                <li>Is Bust: {{bustParty.bust}}</li>
                             </ul>
                         </div>
                     </div>

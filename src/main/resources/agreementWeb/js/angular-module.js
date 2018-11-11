@@ -28,11 +28,18 @@ app.controller('DemoAppController', function($http, $location, $uibModal) {
 
     // We identify the node.
     const apiBaseURL = "/api/agreement/";
-    let peers = [];
+    demoApp.peers = [];
 
-    $http.get(apiBaseURL + "me").then((response) => demoApp.thisNode = response.data.me);
-
-    $http.get(apiBaseURL + "peers").then((response) => peers = response.data.peers);
+    $http.get(apiBaseURL + "me")
+    .then(response => {
+        demoApp.thisNode = response.data.me;
+        demoApp.oracle = demoApp.thisNode;
+        return $http.get(apiBaseURL + "peers");
+    })
+    .then(response => {
+        demoApp.peers = response.data.peers;
+        return demoApp.getBustParties(demoApp.oracle);
+    });
 
     demoApp.openCreateModal = () => {
         const modalInstance = $uibModal.open({
@@ -42,7 +49,7 @@ app.controller('DemoAppController', function($http, $location, $uibModal) {
             resolve: {
                 demoApp: () => demoApp,
                 apiBaseURL: () => apiBaseURL,
-                peers: () => peers
+                peers: () => demoApp.peers
             }
         });
 
@@ -50,7 +57,6 @@ app.controller('DemoAppController', function($http, $location, $uibModal) {
     };
 
     demoApp.openEndModal = (txHash, outputIndex) => {
-        console.log(txHash, outputIndex);
         const modalInstance = $uibModal.open({
             templateUrl: 'endAgreementAppModal.html',
             controller: 'ModalEndAgreementCtrl',
@@ -67,7 +73,6 @@ app.controller('DemoAppController', function($http, $location, $uibModal) {
     };
 
     demoApp.openDirectModal = (txHash, outputIndex) => {
-        console.log(txHash, outputIndex);
         const modalInstance = $uibModal.open({
             templateUrl: 'directAgreementAppModal.html',
             controller: 'ModalDirectAgreementCtrl',
@@ -85,7 +90,7 @@ app.controller('DemoAppController', function($http, $location, $uibModal) {
 
     demoApp.openSetBustModal = () => {
         const everyOne = [];
-        peers.forEach(peer => everyOne.push(peer));
+        demoApp.peers.forEach(peer => everyOne.push(peer));
         everyOne.push(demoApp.thisNode);
         const modalInstance = $uibModal.open({
             templateUrl: 'setBustModal.html',
@@ -101,18 +106,15 @@ app.controller('DemoAppController', function($http, $location, $uibModal) {
         modalInstance.result.then(() => {}, () => {});
     };
 
-    demoApp.getIOUs = () => $http.get(apiBaseURL + "legal-agreements")
-        .then((response) => demoApp.agreements = Object.keys(response.data)
-            .map((key) => ({ state: response.data[key].state.data, ref: response.data[key].ref }))
+    demoApp.getAgreements = () => $http.get(apiBaseURL + "legal-agreements")
+        .then(response => demoApp.agreements = Object.keys(response.data)
+            .map(key => ({ state: response.data[key].state.data, ref: response.data[key].ref }))
             .reverse());
 
-    demoApp.getMyIOUs = () => $http.get(apiBaseURL + "my-ious")
-        .then((response) => demoApp.myious = Object.keys(response.data)
-            .map((key) => response.data[key].state.data)
-            .reverse());
+    demoApp.getBustParties = (oracle) => $http.get(`${apiBaseURL}get-bust-parties?oracle=${oracle}`)
+        .then(response => demoApp.bustParties = response.data);
 
-    demoApp.getIOUs();
-    demoApp.getMyIOUs();
+    demoApp.getAgreements();
 });
 
 app.controller('ModalInstanceCtrl', function ($http, $location, $uibModalInstance, $uibModal, demoApp, apiBaseURL, peers) {
@@ -122,7 +124,7 @@ app.controller('ModalInstanceCtrl', function ($http, $location, $uibModalInstanc
     modalInstance.form = {};
     modalInstance.formError = false;
 
-    // Validate and create IOU.
+    // Validate and create Agreement.
     modalInstance.create = () => {
         if (invalidFormInput()) {
             modalInstance.formError = true;
@@ -137,8 +139,7 @@ app.controller('ModalInstanceCtrl', function ($http, $location, $uibModalInstanc
             $http.post(createLegalAgreementEndpoint).then(
                 (result) => {
                     modalInstance.displayMessage(result);
-                    demoApp.getIOUs();
-                    demoApp.getMyIOUs();
+                    demoApp.getAgreements();
                 },
                 (result) => {
                     modalInstance.displayMessage(result);
@@ -159,10 +160,10 @@ app.controller('ModalInstanceCtrl', function ($http, $location, $uibModalInstanc
         modalInstanceTwo.result.then(() => {}, () => {});
     };
 
-    // Close create IOU modal dialogue.
+    // Close create Agreement modal dialogue.
     modalInstance.cancel = () => $uibModalInstance.dismiss();
 
-    // Validate the IOU.
+    // Validate the Agreement.
     function invalidFormInput() {
         return (modalInstance.form.partyA === undefined) ||
             (modalInstance.form.partyB === undefined) ||
@@ -181,7 +182,7 @@ app.controller('ModalEndAgreementCtrl', function ($http, $location, $uibModalIns
     };
     modalInstance.formError = false;
 
-    // Validate and create IOU.
+    // Validate and end Agreement.
     modalInstance.end = () => {
         if (invalidFormInput()) {
             modalInstance.formError = true;
@@ -195,8 +196,7 @@ app.controller('ModalEndAgreementCtrl', function ($http, $location, $uibModalIns
         $http.put(endAgreementEndpoint).then(
             (result) => {
                 modalInstance.displayMessage(result);
-                demoApp.getIOUs();
-                demoApp.getMyIOUs();
+                demoApp.getAgreements();
             },
             (result) => {
                 modalInstance.displayMessage(result);
@@ -217,10 +217,10 @@ app.controller('ModalEndAgreementCtrl', function ($http, $location, $uibModalIns
         modalInstanceTwo.result.then(() => {}, () => {});
     };
 
-    // Close create IOU modal dialogue.
+    // Close end agreement modal dialogue.
     modalInstance.cancel = () => $uibModalInstance.dismiss();
 
-    // Validate the IOU.
+    // Validate the agreement.
     function invalidFormInput() {
         return (modalInstance.form.txHash === undefined) ||
             isNaN(modalInstance.form.outputIndex);
@@ -236,9 +236,8 @@ app.controller('ModalDirectAgreementCtrl', function ($http, $location, $uibModal
     };
     modalInstance.formError = false;
 
-    // Validate and create IOU.
+    // Validate and do direct agreement.
     modalInstance.goDirect = () => {
-        console.log("Entered in direct");
         if (invalidFormInput()) {
             modalInstance.formError = true;
         } else {
@@ -251,8 +250,7 @@ app.controller('ModalDirectAgreementCtrl', function ($http, $location, $uibModal
         $http.put(directAgreementEndpoint).then(
             (result) => {
                 modalInstance.displayMessage(result);
-                demoApp.getIOUs();
-                demoApp.getMyIOUs();
+                demoApp.getAgreements();
             },
             (result) => {
                 modalInstance.displayMessage(result);
@@ -273,10 +271,10 @@ app.controller('ModalDirectAgreementCtrl', function ($http, $location, $uibModal
         modalInstanceTwo.result.then(() => {}, () => {});
     };
 
-    // Close create IOU modal dialogue.
+    // Close go direct agreement modal dialogue.
     modalInstance.cancel = () => $uibModalInstance.dismiss();
 
-    // Validate the IOU.
+    // Validate the agreement.
     function invalidFormInput() {
         return (modalInstance.form.txHash === undefined) ||
             isNaN(modalInstance.form.outputIndex);
@@ -290,7 +288,7 @@ app.controller('ModalSetBustInstanceCtrl', function ($http, $location, $uibModal
     modalInstance.form = {};
     modalInstance.formError = false;
 
-    // Validate and create IOU.
+    // Validate and set bust party.
     modalInstance.setBust = () => {
         if (invalidFormInput()) {
             modalInstance.formError = true;
@@ -305,8 +303,7 @@ app.controller('ModalSetBustInstanceCtrl', function ($http, $location, $uibModal
             $http.put(setBustEndpoint).then(
                 (result) => {
                     modalInstance.displayMessage(result);
-                    demoApp.getIOUs();
-                    demoApp.getMyIOUs();
+                    demoApp.getBustParties(demoApp.oracle)
                 },
                 (result) => {
                     modalInstance.displayMessage(result);
@@ -327,10 +324,10 @@ app.controller('ModalSetBustInstanceCtrl', function ($http, $location, $uibModal
         modalInstanceTwo.result.then(() => {}, () => {});
     };
 
-    // Close create IOU modal dialogue.
+    // Close set bust party modal dialogue.
     modalInstance.cancel = () => $uibModalInstance.dismiss();
 
-    // Validate the IOU.
+    // Validate the bust party.
     function invalidFormInput() {
         return (modalInstance.form.party === undefined) ||
             (modalInstance.form.isBust === undefined);
