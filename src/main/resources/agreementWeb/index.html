@@ -36,6 +36,7 @@ COMING WEEKS WE'LL WRITE A TUTORIAL ON HOW BEST TO DO THIS.
             <a class="navbar-brand" href="#">{{demoApp.thisNode}}</a>
         </div>
         <button ng-click="demoApp.openCreateModal()" type="button" class="btn btn-primary navbar-btn">Create Legal Agreement</button>
+        <button ng-click="demoApp.openSetBustModal()" type="button" class="btn btn-primary navbar-btn">Set a Bust Party</button>
     </div>
 </nav>
 <script type="text/ng-template" id="demoAppModal.html">
@@ -110,6 +111,40 @@ COMING WEEKS WE'LL WRITE A TUTORIAL ON HOW BEST TO DO THIS.
         <div class="modal-footer">
             <button ng-click="modalInstance.cancel()" type="button" class="btn btn-default">Close</button>
             <button ng-click="modalInstance.end()" type="button" class="btn btn-primary">End Legal Agreement</button>
+        </div>
+    </form>
+</script>
+
+<script type="text/ng-template" id="setBustModal.html">
+    <div class="modal-header">
+        <h4 class="modal-title">Set a Bust Party, From the Oracle</h4>
+    </div>
+    <form>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="party" class="control-label">Party:</label>
+                <select ng-model="modalInstance.form.party" class="form-control" id="party"
+                        ng-options="peer as peer for peer in modalInstance.peers">
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="isBust" class="control-label">Is Bust:</label>
+                <select ng-model="modalInstance.form.isBust" class="form-control" id="isBust">
+                    <option value="true">true</option>
+                    <option value="false">false</option>
+                </select>
+            </div>
+            <div ng-show="modalInstance.formError" class="form-group">
+                <div class="alert alert-danger" role="alert">
+                    <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+                    <span class="sr-only">Error:</span>
+                    Enter valid parameters
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button ng-click="modalInstance.cancel()" type="button" class="btn btn-default">Close</button>
+            <button ng-click="modalInstance.setBust()" type="button" class="btn btn-primary">Set Is Bust</button>
         </div>
     </form>
 </script>
