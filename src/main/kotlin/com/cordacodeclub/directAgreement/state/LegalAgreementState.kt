@@ -32,7 +32,7 @@ data class LegalAgreementState(
         }
     }
 
-    override val participants: List<AbstractParty> = listOf(partyA, partyB)
+    override val participants: List<AbstractParty> = listOf(partyA, partyB, intermediary)
 
     override fun generateMappedObject(schema: MappedSchema): PersistentState {
         return when (schema) {
