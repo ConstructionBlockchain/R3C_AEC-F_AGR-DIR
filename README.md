@@ -11,9 +11,17 @@ A direct agreement allows a lender to deal directly with a contractor in the cas
 
 ### Create LegalAgreement
 
+In node shell:
+
 ```yaml
 # From Intermediary
 flow start com.cordacodeclub.directAgreement.flow.LegalAgreementFlow$LegalAgreementFlowInitiator agreementValue: "20 USD", partyA: "O=Contractor,L=London,C=GB", partyB: "O=Lender,L=New York,C=US", oracle: "O=Oracle,L=Hamburg,C=DE"
+```
+
+With API:
+
+```bash
+curl -X PUT 'http://localhost:10009/api/agreement/create-legal-agreement?quantity=20&currency=USD&partyA=O=Contractor,L=London,C=GB&partyB=O=Lender,L=New%20York,C=US&oracle=O=Oracle,L=Hamburg,C=DE'
 ```
 
 ### Get status

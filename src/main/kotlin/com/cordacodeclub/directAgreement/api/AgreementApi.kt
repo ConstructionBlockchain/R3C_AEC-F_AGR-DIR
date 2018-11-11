@@ -12,14 +12,15 @@ import net.corda.core.node.services.IdentityService
 import net.corda.core.node.services.Vault
 import net.corda.core.node.services.vault.QueryCriteria
 import net.corda.core.node.services.vault.builder
+import net.corda.core.utilities.getOrThrow
 import net.corda.core.utilities.loggerFor
 import org.slf4j.Logger
 import java.util.*
 import javax.ws.rs.*
 import javax.ws.rs.core.MediaType
 import javax.ws.rs.core.Response
-import javax.ws.rs.core.Response.Status.BAD_REQUEST
-import javax.ws.rs.core.Response.Status.CREATED
+import javax.ws.rs.core.Response.Status.*
+
 val SERVICE_NAMES = listOf("oracle", "Network Map Service")
 
 @Path("agreement")
@@ -73,37 +74,52 @@ class AgreementApi(private val rpcOps: CordaRPCOps) {
      * The flow is invoked asynchronously. It returns a future when the flow's call() method returns.
      */
     //Do we need an endpoint for every LegalAgreement state? (INTERMEDIATE/DIRECT/COMPLETED)
-//    @PUT
-//    @Path("create-legalAgreement")
-//    fun createLegalAgreement(@QueryParam("value") value: Amount<Currency>,
-//                             @QueryParam("partyA") partyA: CordaX500Name?,
-//                             @QueryParam("partyB") partyB: CordaX500Name?,
-//                             @QueryParam("oracle") oracle: CordaX500Name?): Response {
-//        if (value.quantity <= 0 ) {
-//            return Response.status(BAD_REQUEST).entity("Query parameter 'value' must be non-negative.\n").build()
-//        }
-//        if (partyA == null || partyB == null ||  oracle== null) {
-//            return Response.status(BAD_REQUEST).entity("Query parameter '$partyA'/'$partyB'/'$oracle' missing or has wrong format.\n").build()
-//        }
-//
-//        val partyA = rpcOps.wellKnownPartyFromX500Name(partyA) ?:
-//        return Response.status(BAD_REQUEST).entity("Party named $partyA cannot be found.\n").build()
-//
-//        val partyB = rpcOps.wellKnownPartyFromX500Name(partyB) ?:
-//        return Response.status(BAD_REQUEST).entity("Party named $partyB cannot be found.\n").build()
-//
-//        val oracle = rpcOps.wellKnownPartyFromX500Name(oracle) ?:
-//        return Response.status(BAD_REQUEST).entity("Party named $oracle cannot be found.\n").build()
-//
-//        return try {
-//            val signedTx = rpcOps.startTrackedFlow().returnValue.getOrThrow()
-//            Response.status(CREATED).entity("Transaction id ${signedTx.id} committed to ledger.\n").build()
-//
-//        } catch (ex: Throwable) {
-//            logger.error(ex.message, ex)
-//            Response.status(BAD_REQUEST).entity(ex.message!!).build()
-//        }
-//    }
+    @PUT
+    @Path("create-legal-agreement")
+    fun createLegalAgreement(@QueryParam("quantity") quantity: Long?,
+                             @QueryParam("currency") currencyCode: String?,
+                             @QueryParam("partyA") partyA: CordaX500Name?,
+                             @QueryParam("partyB") partyB: CordaX500Name?,
+                             @QueryParam("oracle") oracle: CordaX500Name?): Response {
+        if (quantity == null || currencyCode == null) {
+            return Response.status(BAD_REQUEST).entity("Query parameter 'quantity'/'currencyCode' missing or has wrong format.\n").build()
+        }
+        if (quantity <= 0) {
+            return Response.status(BAD_REQUEST).entity("Query parameter 'quantity' must be non-negative.\n").build()
+        }
+        if (partyA == null || partyB == null || oracle == null) {
+            return Response.status(BAD_REQUEST).entity("Query parameter 'partyA'/'partyB'/'oracle' missing or has wrong format.\n").build()
+        }
+
+        val partyA = rpcOps.wellKnownPartyFromX500Name(partyA)
+                ?: return Response.status(BAD_REQUEST).entity("Party named $partyA cannot be found.\n").build()
+
+        val partyB = rpcOps.wellKnownPartyFromX500Name(partyB)
+                ?: return Response.status(BAD_REQUEST).entity("Party named $partyB cannot be found.\n").build()
+
+        val oracle = rpcOps.wellKnownPartyFromX500Name(oracle)
+                ?: return Response.status(BAD_REQUEST).entity("Party named $oracle cannot be found.\n").build()
+
+        val currency = try {
+            Currency.getInstance(currencyCode)
+        } catch (e: IllegalArgumentException) {
+            return Response.status(BAD_REQUEST).entity("Currency $currencyCode cannot be found.\n").build()
+        } catch (e: Exception) {
+            logger.error("Failed getting Currency $currencyCode", e)
+            return Response.status(INTERNAL_SERVER_ERROR).entity("Error getting $currencyCode.\n").build()
+        }
+        val value = Amount(quantity, currency)
+
+        return try {
+            val signedTx = rpcOps.startTrackedFlow(::LegalAgreementFlowInitiator, value, partyA, partyB, oracle)
+                    .returnValue.getOrThrow()
+            Response.status(CREATED).entity("Transaction id ${signedTx.id} committed to ledger.\n").build()
+
+        } catch (ex: Throwable) {
+            logger.error(ex.message, ex)
+            Response.status(BAD_REQUEST).entity(ex.message!!).build()
+        }
+    }
 
     /**
      * Displays all LegalAgreement states that are created by Party.
