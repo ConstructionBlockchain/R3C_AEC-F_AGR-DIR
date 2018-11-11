@@ -2,12 +2,14 @@ package com.cordacodeclub.directAgreement.flow
 
 import co.paralleluniverse.fibers.Suspendable
 import com.cordacodeclub.directAgreement.oracle.BustDatabaseService
+import com.cordacodeclub.directAgreement.oracle.BustParty
 import com.cordacodeclub.directAgreement.oracle.BustPartyOracle
 import net.corda.core.crypto.TransactionSignature
 import net.corda.core.flows.*
 import net.corda.core.identity.Party
 import net.corda.core.transactions.FilteredTransaction
 import net.corda.core.utilities.ProgressTracker
+import net.corda.core.utilities.UntrustworthyData
 import net.corda.core.utilities.unwrap
 
 object BustPartyOracleFlow {
@@ -93,6 +95,65 @@ object BustPartyOracleFlow {
             progressTracker.currentStep = FETCHING
             val response = try {
                 bustPartyOracle().isItBust(party)
+            } catch (e: Exception) {
+                // Re-throw the exception as a FlowException so its propagated to the querying node.
+                throw FlowException(e)
+            }
+
+            progressTracker.currentStep = SENDING
+            session.send(response)
+        }
+    }
+
+
+    @InitiatingFlow
+    @StartableByRPC
+    class QueryBustPartyAllInitiator(
+            val oracle: Party,
+            override val progressTracker: ProgressTracker= tracker()) : FlowLogic<List<BustParty>>() {
+
+        constructor(oracle: Party) : this(oracle, tracker())
+
+        companion object {
+            object RECEIVING_SENDING : ProgressTracker.Step("Sending and receiving partly information request to " +
+                    "BustPartyOracle.")
+
+            @JvmStatic
+            fun tracker() = ProgressTracker(RECEIVING_SENDING)
+        }
+
+        @Suspendable
+        override fun call(): List<BustParty> {
+            progressTracker.currentStep = RECEIVING_SENDING
+            class Validator: UntrustworthyData.Validator<Any, List<BustParty>> {
+                override fun validate(data: Any) = data as List<BustParty>
+            }
+            val list= initiateFlow(oracle).sendAndReceive<List<BustParty>>("").unwrap(Validator())
+            return list
+        }
+    }
+
+    @InitiatedBy(QueryBustPartyAllInitiator::class)
+    open class QueryBustPartyAllHandler(
+            val session: FlowSession) : FlowLogic<Unit>() {
+
+        companion object {
+            object FETCHING : ProgressTracker.Step("Fetching bust status.")
+            object SENDING : ProgressTracker.Step("Sending query response.")
+
+            @JvmStatic
+            fun tracker() = ProgressTracker(FETCHING, SENDING)
+        }
+
+        override val progressTracker: ProgressTracker = tracker()
+
+        open fun bustPartyOracle() = serviceHub.cordaService(BustPartyOracle::class.java)
+
+        @Suspendable
+        override fun call() {
+            progressTracker.currentStep = FETCHING
+            val response = try {
+                bustPartyOracle().getAllBustParties()
             } catch (e: Exception) {
                 // Re-throw the exception as a FlowException so its propagated to the querying node.
                 throw FlowException(e)
