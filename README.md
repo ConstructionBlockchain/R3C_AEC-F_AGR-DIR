@@ -21,7 +21,7 @@ flow start com.cordacodeclub.directAgreement.flow.LegalAgreementFlow$LegalAgreem
 With API:
 
 ```bash
-curl -X PUT 'http://localhost:10015/api/agreement/create-legal-agreement?quantity=20&currency=USD&partyA=O=Contractor,L=London,C=GB&partyB=O=Lender,L=New%20York,C=US&oracle=O=Oracle,L=Hamburg,C=DE'
+curl -X POST 'http://localhost:10015/api/agreement/create-legal-agreement?quantity=20&currency=USD&partyA=O=Contractor,L=London,C=GB&partyB=O=Lender,L=New%20York,C=US&oracle=O=Oracle,L=Hamburg,C=DE'
 ```
 
 ### Get status
@@ -47,16 +47,32 @@ curl -X PUT 'http://localhost:10018/api/agreement/set-party-bust?party=O=Interme
 
 ### Go to direct agreement
 
+In node shell:
+
 ```yaml
 # From Contractor or Lender
-flow start com.cordacodeclub.directAgreement.flow.DirectAgreementFlow$DirectAgreementFlowInitiator txhash: "9309801D9A84D4A1D2EED84E4AC553B3427EBE10195772B678C0ECB1593AC263", index: 0
+flow start com.cordacodeclub.directAgreement.flow.DirectAgreementFlow$DirectAgreementFlowInitiator txhash: "A3131AE786FC38416C7906F9C5BC8B461C71625CF348B974038AF696779C1F4E", index: 0
+```
+
+With API:
+
+```bash
+curl -X PUT 'http://localhost:10009/api/agreement/go-direct-agreement?txHash=CC2716F4FA9F3054206F8C5E3A75DB7F1E903126FB995EA3AB47A4030F6AEA90&outputIndex=0'
 ```
 
 ### Complete agreement
 
+In node shell:
+
 ```yaml
 # From any allowed Intermediary / Contractor or Contractor / Lender
 flow start com.cordacodeclub.directAgreement.flow.EndAgreementFlow$EndAgreementFlowInitiator txhash: "2A7C7A70B7EBF9D4915BD83828C391586F6582E5E2448214ECA1483ACDEF56E7", index: 0
+```
+
+With API:
+
+```bash
+curl -X PUT 'http://localhost:10009/api/agreement/end-agreement?txHash=CC2716F4FA9F3054206F8C5E3A75DB7F1E903126FB995EA3AB47A4030F6AEA90&outputIndex=0'
 ```
 
 ## Troubleshoot

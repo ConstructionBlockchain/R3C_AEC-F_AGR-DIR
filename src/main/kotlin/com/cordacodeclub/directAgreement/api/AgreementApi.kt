@@ -1,12 +1,13 @@
 package com.cordacodeclub.directAgreement.api
 
 import com.cordacodeclub.directAgreement.flow.BustPartyOracleFlow.SetBustPartyInitiator
+import com.cordacodeclub.directAgreement.flow.DirectAgreementFlow.DirectAgreementFlowInitiator
+import com.cordacodeclub.directAgreement.flow.EndAgreementFlow.EndAgreementFlowInitiator
 import com.cordacodeclub.directAgreement.flow.LegalAgreementFlow.LegalAgreementFlowInitiator
 import com.cordacodeclub.directAgreement.schema.LegalAgreementSchemaV1
 import com.cordacodeclub.directAgreement.state.LegalAgreementState
 import net.corda.core.contracts.Amount
 import net.corda.core.identity.CordaX500Name
-import net.corda.core.identity.Party
 import net.corda.core.messaging.CordaRPCOps
 import net.corda.core.messaging.startTrackedFlow
 import net.corda.core.messaging.vaultQueryBy
@@ -60,12 +61,12 @@ class AgreementApi(private val rpcOps: CordaRPCOps) {
      * Displays all LegalAgreement states that exist in the node's vault.
      */
     @GET
-    @Path("legalAgreements")
+    @Path("legal-agreements")
     @Produces(MediaType.APPLICATION_JSON)
     fun getLegalAgreements() = rpcOps.vaultQueryBy<LegalAgreementState>().states
 
     /**
-     * Initiates a flow to agree a LegalAgreement between PartyA and Intermediary.
+     * Initiates a flow to agree a LegalAgreement between Contractor and Intermediary.
      *
      * Once the flow finishes it will have written the LegalAgreement to ledger. Both the PartyA and the Intermediary will be able to
      * see it when calling /api/directAgreement/legalAgreements on their respective nodes.
@@ -73,10 +74,10 @@ class AgreementApi(private val rpcOps: CordaRPCOps) {
      * This end-point takes PartyA's name, PartyB's name and Oracle's name as part of the path. If the serving node can't find the other parties
      * in its network map cache, it will return an HTTP bad request.
      *
-     * The flow is invoked asynchronously. It returns a future when the flow's call() method returns.
+     * The flow is invoked asynchronously on the intermediary. It returns a future when the flow's call() method returns.
      */
     //Do we need an endpoint for every LegalAgreement state? (INTERMEDIATE/DIRECT/COMPLETED)
-    @PUT
+    @POST
     @Path("create-legal-agreement")
     fun createLegalAgreement(@QueryParam("quantity") quantity: Long?,
                              @QueryParam("currency") currencyCode: String?,
@@ -171,6 +172,62 @@ class AgreementApi(private val rpcOps: CordaRPCOps) {
             val criteria = generalCriteria.and(customCriteria)
             val results = rpcOps.vaultQueryBy<LegalAgreementState>(criteria).states
             return Response.ok(results).build()
+        }
+    }
+
+    /**
+     * Initiates a flow to change a LegalAgreement between Contractor and Intermediary into a direct agreement
+     * between Contractor and Lender.
+     *
+     * Once the flow finishes it will have written the updated LegalAgreement to ledger. Both the Contractor and the Intermediary will be able to
+     * see it when calling /api/directAgreement/legalAgreements on their respective nodes.
+     *
+     * This end-point takes PartyA's name, PartyB's name and Oracle's name as part of the path. If the serving node can't find the other parties
+     * in its network map cache, it will return an HTTP bad request.
+     *
+     * The flow is invoked asynchronously on the Contractor or Lender. It returns a future when the flow's call() method returns.
+     */
+    @PUT
+    @Path("go-direct-agreement")
+    fun goDirectAgreement(@QueryParam("txHash") txHash: String?,
+                             @QueryParam("outputIndex") index: Int?): Response {
+        if (txHash == null || index == null) {
+            return Response.status(BAD_REQUEST).entity("Query parameter 'txHash'/'outputIndex' missing or has wrong format.\n").build()
+        }
+        if (index < 0) {
+            return Response.status(BAD_REQUEST).entity("Query parameter 'index' must be positive.\n").build()
+        }
+
+        return try {
+            val signedTx = rpcOps.startTrackedFlow(::DirectAgreementFlowInitiator, txHash, index)
+                    .returnValue.getOrThrow()
+            Response.status(OK).entity("Transaction id ${signedTx.id} committed to ledger.\n").build()
+
+        } catch (ex: Throwable) {
+            logger.error(ex.message, ex)
+            Response.status(BAD_REQUEST).entity(ex.message!!).build()
+        }
+    }
+
+    @PUT
+    @Path("end-agreement")
+    fun endAgreement(@QueryParam("txHash") txHash: String?,
+                          @QueryParam("outputIndex") index: Int?): Response {
+        if (txHash == null || index == null) {
+            return Response.status(BAD_REQUEST).entity("Query parameter 'txHash'/'outputIndex' missing or has wrong format.\n").build()
+        }
+        if (index < 0) {
+            return Response.status(BAD_REQUEST).entity("Query parameter 'index' must be positive.\n").build()
+        }
+
+        return try {
+            val signedTx = rpcOps.startTrackedFlow(::EndAgreementFlowInitiator, txHash, index)
+                    .returnValue.getOrThrow()
+            Response.status(OK).entity("Transaction id ${signedTx.id} committed to ledger.\n").build()
+
+        } catch (ex: Throwable) {
+            logger.error(ex.message, ex)
+            Response.status(BAD_REQUEST).entity(ex.message!!).build()
         }
     }
 }
