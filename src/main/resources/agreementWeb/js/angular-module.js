@@ -66,6 +66,23 @@ app.controller('DemoAppController', function($http, $location, $uibModal) {
         modalInstance.result.then(() => {}, () => {});
     };
 
+    demoApp.openDirectModal = (txHash, outputIndex) => {
+        console.log(txHash, outputIndex);
+        const modalInstance = $uibModal.open({
+            templateUrl: 'directAgreementAppModal.html',
+            controller: 'ModalDirectAgreementCtrl',
+            controllerAs: 'modalInstance',
+            resolve: {
+                demoApp: () => demoApp,
+                apiBaseURL: () => apiBaseURL,
+                txHash: () => txHash,
+                outputIndex: () => outputIndex
+            }
+        });
+
+        modalInstance.result.then(() => {}, () => {});
+    };
+
     demoApp.openSetBustModal = () => {
         const everyOne = [];
         peers.forEach(peer => everyOne.push(peer));
@@ -166,7 +183,6 @@ app.controller('ModalEndAgreementCtrl', function ($http, $location, $uibModalIns
 
     // Validate and create IOU.
     modalInstance.end = () => {
-        console.log("Entered in end");
         if (invalidFormInput()) {
             modalInstance.formError = true;
         } else {
@@ -177,6 +193,62 @@ app.controller('ModalEndAgreementCtrl', function ($http, $location, $uibModalIns
             const endAgreementEndpoint = `${apiBaseURL}end-agreement?txHash=${modalInstance.form.txHash}&outputIndex=${modalInstance.form.outputIndex}`;
 
         $http.put(endAgreementEndpoint).then(
+            (result) => {
+                modalInstance.displayMessage(result);
+                demoApp.getIOUs();
+                demoApp.getMyIOUs();
+            },
+            (result) => {
+                modalInstance.displayMessage(result);
+            }
+        );
+        }
+    };
+
+    modalInstance.displayMessage = (message) => {
+        const modalInstanceTwo = $uibModal.open({
+            templateUrl: 'messageContent.html',
+            controller: 'messageCtrl',
+            controllerAs: 'modalInstanceTwo',
+            resolve: { message: () => message }
+        });
+
+        // No behaviour on close / dismiss.
+        modalInstanceTwo.result.then(() => {}, () => {});
+    };
+
+    // Close create IOU modal dialogue.
+    modalInstance.cancel = () => $uibModalInstance.dismiss();
+
+    // Validate the IOU.
+    function invalidFormInput() {
+        return (modalInstance.form.txHash === undefined) ||
+            isNaN(modalInstance.form.outputIndex);
+    }
+});
+
+app.controller('ModalDirectAgreementCtrl', function ($http, $location, $uibModalInstance, $uibModal, demoApp, apiBaseURL, txHash, outputIndex) {
+    const modalInstance = this;
+
+    modalInstance.form = {
+        txHash: txHash,
+        outputIndex: outputIndex
+    };
+    modalInstance.formError = false;
+
+    // Validate and create IOU.
+    modalInstance.goDirect = () => {
+        console.log("Entered in direct");
+        if (invalidFormInput()) {
+            modalInstance.formError = true;
+        } else {
+            modalInstance.formError = false;
+
+            $uibModalInstance.close();
+
+            const directAgreementEndpoint = `${apiBaseURL}go-direct-agreement?txHash=${modalInstance.form.txHash}&outputIndex=${modalInstance.form.outputIndex}`;
+
+        $http.put(directAgreementEndpoint).then(
             (result) => {
                 modalInstance.displayMessage(result);
                 demoApp.getIOUs();

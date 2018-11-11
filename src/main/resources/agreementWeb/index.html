@@ -88,7 +88,7 @@ COMING WEEKS WE'LL WRITE A TUTORIAL ON HOW BEST TO DO THIS.
 
 <script type="text/ng-template" id="endAgreementAppModal.html">
     <div class="modal-header">
-        <h4 class="modal-title">End Legal Agreement From Contractor or Lender</h4>
+        <h4 class="modal-title">End Legal Agreement From Contractor or Lender or Intermediary</h4>
     </div>
     <form>
         <div class="modal-body">
@@ -111,6 +111,35 @@ COMING WEEKS WE'LL WRITE A TUTORIAL ON HOW BEST TO DO THIS.
         <div class="modal-footer">
             <button ng-click="modalInstance.cancel()" type="button" class="btn btn-default">Close</button>
             <button ng-click="modalInstance.end()" type="button" class="btn btn-primary">End Legal Agreement</button>
+        </div>
+    </form>
+</script>
+
+<script type="text/ng-template" id="directAgreementAppModal.html">
+    <div class="modal-header">
+        <h4 class="modal-title">Do Direct on Legal Agreement From Contractor or Lender</h4>
+    </div>
+    <form>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="txHashDirect" class="control-label">Tx Hash:</label>
+                <input type="text" readonly="readonly" ng-value="modalInstance.form.txHash" id="txHashDirect"/>
+            </div>
+            <div class="form-group">
+                <label for="outputIndexDirect" class="control-label">Output Index:</label>
+                <input type="text" readonly="readonly" ng-value="modalInstance.form.outputIndex" id="outputIndexDirect"/>
+            </div>
+            <div ng-show="modalInstance.formError" class="form-group">
+                <div class="alert alert-danger" role="alert">
+                    <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+                    <span class="sr-only">Error:</span>
+                    Enter valid parameters
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button ng-click="modalInstance.cancel()" type="button" class="btn btn-default">Close</button>
+            <button ng-click="modalInstance.goDirect()" type="button" class="btn btn-primary">Go Direct on Legal Agreement</button>
         </div>
     </form>
 </script>
@@ -182,6 +211,7 @@ COMING WEEKS WE'LL WRITE A TUTORIAL ON HOW BEST TO DO THIS.
                                 <li>Tx hash: {{agreement.ref.txhash}}</li>
                                 <li>Output Index: {{agreement.ref.index}}</li>
                             </ul>
+                            <button ng-click="demoApp.openDirectModal(agreement.ref.txhash, agreement.ref.index)" type="button" class="btn btn-primary navbar-btn">Go Direct With This Agreement</button>
                             <button ng-click="demoApp.openEndModal(agreement.ref.txhash, agreement.ref.index)" type="button" class="btn btn-primary navbar-btn">End This Agreement</button>
                         </div>
                     </div>
