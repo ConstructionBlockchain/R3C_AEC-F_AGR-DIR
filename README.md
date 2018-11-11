@@ -9,6 +9,19 @@ A direct agreement allows a lender to deal directly with a contractor in the cas
 
 ## Example actions:
 
+## Setup the project
+
+In the directory via shell:
+
+```bash
+./gradlew deployNodes
+```
+
+Start the nodes by running the following command
+```bash
+build/nodes/runnodes
+```
+
 ### Create LegalAgreement
 
 In node shell:
