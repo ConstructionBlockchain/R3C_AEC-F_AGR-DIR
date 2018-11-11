@@ -22,7 +22,7 @@ object LegalAgreementSchemaV1 : MappedSchema(
         version = 1,
         mappedTypes = listOf(PersistentLegalAgreement::class.java)) {
     @Entity
-    @Table(name = "legalAgreement_states")
+    @Table(name = "legal_agreement_states")
     class PersistentLegalAgreement(
             @Column(name = "intermediary")
             var intermediary: String,
@@ -39,10 +39,14 @@ object LegalAgreementSchemaV1 : MappedSchema(
             @Column(name = "status")
             var status: String,
 
-            @Column(name = "value")
-            var value: Amount<Currency>
+            @Column(name = "value_quantity")
+            var valueQuantity: Long,
+
+            @Column(name = "value_currency")
+            var valueCurrency: String
+
     ) : PersistentState() {
         // Default constructor required by hibernate.
-        constructor() : this("", "", "", "", "", 0.DOLLARS)
+        constructor() : this("", "", "", "", "", 0, "")
     }
 }

@@ -42,7 +42,8 @@ data class LegalAgreementState(
                     this.partyB.name.toString(),
                     this.oracle.name.toString(),
                     this.status.toString(),
-                    this.value
+                    this.value.quantity,
+                    this.value.token.toString()
             )
             else -> throw IllegalArgumentException("Unrecognised schema $schema")
         }
