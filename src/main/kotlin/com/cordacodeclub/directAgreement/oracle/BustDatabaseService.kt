@@ -1,10 +1,8 @@
 package com.cordacodeclub.directAgreement.oracle
 
 import com.cordacodeclub.directAgreement.db.DatabaseService
-import net.corda.core.identity.Party
 import net.corda.core.node.ServiceHub
 import net.corda.core.node.services.CordaService
-import java.sql.ResultSet
 import java.sql.SQLException
 
 /**
@@ -67,7 +65,7 @@ class BustDatabaseService(services: ServiceHub) : DatabaseService(services) {
 
         val params = mapOf(1 to party)
 
-        val results = executeQuery(query, params, { it -> it.getBoolean("isBust") })
+        val results = executeQuery(query, params) { it.getBoolean("isBust") }
 
         val isBust = when (results.isEmpty()) {
             true -> false
@@ -89,7 +87,7 @@ class BustDatabaseService(services: ServiceHub) : DatabaseService(services) {
                 it.getBoolean("isBust"))
         }
 
-        log.info("The $tableName table.")
+        log.info("Selected ${results.size} parties from $tableName table.")
         return results
     }
 

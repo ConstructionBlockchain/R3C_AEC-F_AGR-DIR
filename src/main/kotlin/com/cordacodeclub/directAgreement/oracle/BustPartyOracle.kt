@@ -19,6 +19,11 @@ class BustPartyOracle(val services: ServiceHub) : SingletonSerializeAsToken() {
         return databaseService.queryIsBust(party.toString())
     }
 
+    fun getAllBustParties(): List<BustParty> {
+        val databaseService = services.cordaService(BustDatabaseService::class.java)
+        return databaseService.queryBustParties();
+    }
+
     fun sign(ftx: FilteredTransaction): TransactionSignature {
         // Check the partial Merkle tree is valid.
         ftx.verify()

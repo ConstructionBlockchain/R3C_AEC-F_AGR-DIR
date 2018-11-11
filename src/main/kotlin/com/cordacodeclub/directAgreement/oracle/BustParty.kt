@@ -1,4 +1,6 @@
 package com.cordacodeclub.directAgreement.oracle
 
-data class BustParty(val party: String, val isBust: Boolean) {
-}
+import net.corda.core.serialization.CordaSerializable
+
+@CordaSerializable
+data class BustParty(val party: String, val isBust: Boolean)
