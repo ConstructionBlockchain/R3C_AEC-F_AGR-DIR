@@ -10,6 +10,7 @@ import java.sql.SQLException
 
 /**
  * A generic database service superclass for handling for database update.
+ * From https://github.com/corda/samples/blob/release-V3/flow-db/src/main/kotlin/com/flowdb/DatabaseService.kt
  *
  * @param services The node's service hub.
  */
